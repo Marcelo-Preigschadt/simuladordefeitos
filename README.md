@@ -2,18 +2,33 @@
 
 Simulador educacional de diagnóstico de falhas em computadores, desenvolvido em HTML, CSS e JavaScript puro para execução no GitHub Pages.
 
-## Recursos da versão inicial
+## Como funciona
 
 - identificação do participante e da instituição;
-- cinco casos sorteados por sessão;
-- cenários de hardware, firmware, sistema operacional e rede;
+- cinco casos sorteados por sessão, sempre combinando hardware e software;
 - controle virtual de energia do computador;
-- monitor e gabinete com estados coerentes com cada defeito;
-- inspeção individual de componentes;
+- monitor com mensagens de POST, UEFI, recuperação, instalação e sistema;
+- gabinete aberto com imagens dos componentes instalados;
+- substituição direta da peça por arrastar e soltar;
+- alternativa para telas de toque: selecionar a peça e tocar no encaixe;
+- identificação explícita de unidades como **HD / SSD**;
+- procedimentos simulados de instalação do sistema, reparo de boot, instalação
+  de driver, remoção de malware, correção de DNS e ordem de boot;
 - ferramentas de diagnóstico e registro técnico;
-- confirmação da hipótese, tentativas e pontuação;
+- validação automática da intervenção, erros e pontuação;
 - relatório final de desempenho;
 - interface responsiva para computador, tablet e celular.
+
+Não existe uma etapa separada para escolher o defeito em uma lista. A própria
+intervenção do participante — trocar a peça ou executar um procedimento — é a
+resposta do caso.
+
+## Tecnologias
+
+- HTML, CSS e JavaScript puro;
+- sem dependências de execução e sem coleta de dados;
+- ícones vetoriais adaptados do projeto Bootstrap Icons, distribuídos sob a
+  licença MIT. Consulte `assets/icons/LICENSE.md`.
 
 ## Execução local
 
