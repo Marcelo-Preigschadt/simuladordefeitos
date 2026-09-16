@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Simulador educacional de diagnóstico de defeitos em computadores."
+    />
+    <meta name="theme-color" content="#05080c" />
+    <title>SimulaPC — Laboratório de Diagnóstico</title>
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%2305080c'/%3E%3Cpath d='M16 17h32v23H16zM24 47h16M32 40v7' fill='none' stroke='%2329e6b1' stroke-width='5' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='43' cy='35' r='2.5' fill='%23ffb454'/%3E%3C/svg%3E"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="./data.js" defer></script>
+    <script src="./app.js" defer></script>
+  </head>
+  <body>
+    <div class="ambient-grid" aria-hidden="true"></div>
+
+    <section class="start-screen" id="startScreen" aria-labelledby="startTitle">
+      <div class="start-shell">
+        <div class="brand-lockup">
+          <span class="brand-mark" aria-hidden="true">SP</span>
+          <div>
+            <p class="eyebrow">Laboratório virtual</p>
+            <p class="brand-name">SIMULA<span>PC</span></p>
+          </div>
+        </div>
+
+        <div class="start-grid">
+          <div class="start-copy">
+            <p class="status-kicker"><span></span> Sistema pronto para treinamento</p>
+            <h1 id="startTitle">Diagnostique antes de substituir.</h1>
+            <p class="start-description">
+              Analise sintomas, ligue a estação, inspecione componentes e registre
+              o diagnóstico técnico correto em cinco ocorrências sorteadas.
+            </p>
+
+            <ol class="procedure-list" aria-label="Etapas da simulação">
+              <li><strong>01</strong><span>Observe o sintoma inicial</span></li>
+              <li><strong>02</strong><span>Execute testes e colete evidências</span></li>
+              <li><strong>03</strong><span>Confirme a causa provável</span></li>
+            </ol>
+          </div>
+
+          <form class="access-card" id="accessForm">
+            <div class="access-card__header">
+              <span class="terminal-prompt" aria-hidden="true">&gt;_</span>
+              <div>
+                <p class="eyebrow">Identificação</p>
+                <h2>Iniciar sessão</h2>
+              </div>
+            </div>
+
+            <label for="studentName">Nome do participante</label>
+            <input
+              id="studentName"
+              name="studentName"
+              type="text"
+              autocomplete="name"
+              maxlength="60"
+              placeholder="Digite seu nome"
+              required
+            />
+
+            <label for="institutionName">Instituição</label>
+            <input
+              id="institutionName"
+              name="institutionName"
+              type="text"
+              autocomplete="organization"
+              maxlength="80"
+              placeholder="Nome da escola ou instituição"
+              required
+            />
+
+            <button class="primary-button" type="submit">
+              <span>Iniciar simulação</span>
+              <span aria-hidden="true">→</span>
+            </button>
+            <p class="form-note">A sessão é executada somente neste navegador.</p>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <main class="simulator" id="simulator" hidden>
+      <header class="topbar">
+        <div class="brand-lockup brand-lockup--compact">
+          <span class="brand-mark" aria-hidden="true">SP</span>
+          <div>
+            <p class="brand-name">SIMULA<span>PC</span></p>
+            <p class="topbar-subtitle">Diagnóstico de hardware e software</p>
+          </div>
+        </div>
+
+        <dl class="session-strip">
+          <div>
+            <dt>Participante</dt>
+            <dd id="sessionStudent">—</dd>
+          </div>
+          <div>
+            <dt>Instituição</dt>
+            <dd id="sessionInstitution">—</dd>
+          </div>
+          <div>
+            <dt>Caso</dt>
+            <dd id="sessionCase">01/05</dd>
+          </div>
+          <div>
+            <dt>Pontuação</dt>
+            <dd id="sessionScore">0000</dd>
+          </div>
+          <div>
+            <dt>Tempo</dt>
+            <dd id="sessionTime">00:00</dd>
+          </div>
+        </dl>
+      </header>
+
+      <div class="workspace">
+        <section class="diagnostic-bay" aria-labelledby="caseTitle">
+          <article class="case-brief">
+            <div class="case-brief__number" id="caseNumber">CASO 01</div>
+            <div class="case-brief__content">
+              <p class="eyebrow">Ordem de serviço</p>
+              <h1 id="caseTitle">Carregando ocorrência...</h1>
+              <p id="caseSymptom">Aguarde a inicialização da bancada.</p>
+            </div>
+            <div class="severity-badge" id="severityBadge">NÍVEL 1</div>
+          </article>
+
+          <div class="workbench" aria-label="Estação de trabalho virtual">
+            <div class="monitor-unit">
+              <div class="monitor-frame">
+                <div class="monitor-screen is-off" id="monitorScreen" aria-live="polite">
+                  <div class="screen-content" id="screenContent">
+                    <span class="screen-off-label">SEM ENERGIA</span>
+                  </div>
+                  <div class="screen-scanlines" aria-hidden="true"></div>
+                </div>
+                <div class="monitor-controls" aria-hidden="true">
+                  <span></span><span></span><span class="monitor-led"></span>
+                </div>
+              </div>
+              <div class="monitor-neck" aria-hidden="true"></div>
+              <div class="monitor-base" aria-hidden="true"></div>
+            </div>
+
+            <div class="tower-unit" id="towerUnit" aria-label="Gabinete do computador">
+              <div class="tower-vents" aria-hidden="true">
+                <span></span><span></span><span></span><span></span><span></span>
+              </div>
+              <div class="drive-slot" aria-hidden="true"></div>
+              <div class="tower-power" aria-hidden="true">
+                <span class="power-symbol">⏻</span>
+              </div>
+              <div class="tower-status">
+                <span class="tower-led" id="towerLed"></span>
+                <span id="towerStatusText">DESLIGADO</span>
+              </div>
+              <div class="tower-brand" aria-hidden="true">SIMULAB</div>
+            </div>
+
+            <div class="cable-line cable-line--display" aria-hidden="true"></div>
+            <div class="cable-line cable-line--power" aria-hidden="true"></div>
+          </div>
+
+          <section class="tool-rack" aria-labelledby="toolsTitle">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Bancada técnica</p>
+                <h2 id="toolsTitle">Ferramentas de diagnóstico</h2>
+              </div>
+              <span class="section-counter" id="toolCounter">0 testes</span>
+            </div>
+            <div class="tool-grid" id="toolGrid"></div>
+          </section>
+
+          <section class="terminal-panel" aria-labelledby="terminalTitle">
+            <div class="terminal-panel__bar">
+              <div>
+                <span class="terminal-light terminal-light--red"></span>
+                <span class="terminal-light terminal-light--yellow"></span>
+                <span class="terminal-light terminal-light--green"></span>
+              </div>
+              <h2 id="terminalTitle">Registro técnico</h2>
+              <button class="text-button" id="clearLogButton" type="button">Limpar</button>
+            </div>
+            <div class="terminal-log" id="terminalLog" role="log" aria-live="polite"></div>
+          </section>
+        </section>
+
+        <aside class="control-console" aria-label="Console de controle">
+          <section class="console-card power-card">
+            <div class="section-heading section-heading--small">
+              <div>
+                <p class="eyebrow">Controle principal</p>
+                <h2>Energia do PC</h2>
+              </div>
+              <span class="state-pill is-off" id="powerState">OFF</span>
+            </div>
+            <button class="power-button" id="powerButton" type="button" aria-pressed="false">
+              <span class="power-button__icon" aria-hidden="true">⏻</span>
+              <span class="power-button__label">Ligar computador</span>
+            </button>
+            <p class="power-hint" id="powerHint">A estação está desenergizada.</p>
+          </section>
+
+          <section class="console-card components-card">
+            <div class="section-heading section-heading--small">
+              <div>
+                <p class="eyebrow">Inspeção</p>
+                <h2>Componentes</h2>
+              </div>
+              <span class="section-counter" id="inspectionCounter">0 vistos</span>
+            </div>
+
+            <div class="tabs" role="tablist" aria-label="Categorias de componentes">
+              <button
+                class="tab is-active"
+                id="hardwareTab"
+                type="button"
+                role="tab"
+                aria-selected="true"
+                aria-controls="componentGrid"
+                data-category="hardware"
+              >
+                Hardware
+              </button>
+              <button
+                class="tab"
+                id="softwareTab"
+                type="button"
+                role="tab"
+                aria-selected="false"
+                aria-controls="componentGrid"
+                data-category="software"
+              >
+                Software
+              </button>
+            </div>
+
+            <div class="component-grid" id="componentGrid" role="tabpanel"></div>
+          </section>
+
+          <section class="console-card diagnosis-card">
+            <div class="section-heading section-heading--small">
+              <div>
+                <p class="eyebrow">Conclusão</p>
+                <h2>Diagnóstico</h2>
+              </div>
+              <span class="attempts-badge" id="attemptsBadge">0 tentativas</span>
+            </div>
+
+            <label for="diagnosisSelect">Selecione a causa provável</label>
+            <select id="diagnosisSelect">
+              <option value="">Escolha uma hipótese...</option>
+            </select>
+
+            <label for="technicalNote">Justificativa técnica <span>(opcional)</span></label>
+            <textarea
+              id="technicalNote"
+              rows="3"
+              maxlength="240"
+              placeholder="Registre as evidências observadas..."
+            ></textarea>
+
+            <button class="primary-button primary-button--diagnosis" id="submitDiagnosis" type="button">
+              Confirmar diagnóstico
+            </button>
+            <p class="score-rule">Valor inicial: 100 pontos. Testes e erros reduzem a pontuação.</p>
+          </section>
+        </aside>
+      </div>
+    </main>
+
+    <dialog class="inspection-dialog" id="inspectionDialog">
+      <div class="dialog-shell">
+        <div class="dialog-header">
+          <div class="dialog-icon" id="dialogIcon" aria-hidden="true">HW</div>
+          <div>
+            <p class="eyebrow" id="dialogCategory">Hardware</p>
+            <h2 id="dialogTitle">Componente</h2>
+          </div>
+          <button class="icon-button" id="closeInspection" type="button" aria-label="Fechar inspeção">×</button>
+        </div>
+        <p class="dialog-description" id="dialogDescription"></p>
+        <dl class="metric-list" id="dialogMetrics"></dl>
+        <div class="evidence-box" id="evidenceBox">
+          <p class="eyebrow">Evidência coletada</p>
+          <p id="dialogEvidence">Execute o teste para obter dados deste componente.</p>
+        </div>
+        <div class="dialog-actions">
+          <button class="secondary-button" id="markSuspectButton" type="button">Marcar como suspeito</button>
+          <button class="primary-button" id="runComponentTest" type="button">Executar teste</button>
+        </div>
+      </div>
+    </dialog>
+
+    <dialog class="result-dialog" id="resultDialog">
+      <div class="result-shell">
+        <div class="result-mark" id="resultMark" aria-hidden="true">✓</div>
+        <p class="eyebrow" id="resultEyebrow">Diagnóstico confirmado</p>
+        <h2 id="resultTitle">Causa identificada</h2>
+        <p id="resultMessage"></p>
+        <div class="result-details" id="resultDetails"></div>
+        <button class="primary-button" id="nextCaseButton" type="button">Próximo caso</button>
+      </div>
+    </dialog>
+
+    <div class="toast-region" id="toastRegion" aria-live="polite" aria-atomic="true"></div>
+  </body>
+</html>
