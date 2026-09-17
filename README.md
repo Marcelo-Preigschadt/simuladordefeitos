@@ -27,6 +27,10 @@ Não existe uma etapa separada para escolher o defeito em uma lista. A própria
 intervenção do participante — trocar a peça ou executar um procedimento — é a
 resposta do caso.
 
+Para abrir uma prática específica como primeiro caso, use `?case=ID_DO_CASO`.
+Exemplo: `?case=new-drive-no-os` abre diretamente o exercício de instalação do
+Windows em um HD/SSD novo.
+
 ## Tecnologias
 
 - HTML, CSS e JavaScript puro;
