@@ -174,6 +174,13 @@
   }
 
   function selectCases() {
+    const requestedCaseId = new URLSearchParams(window.location.search).get("case");
+    const requestedCase = cases.find((item) => item.id === requestedCaseId);
+    if (requestedCase) {
+      const remainingHardware = shuffle(cases.filter((item) => item.kind === "hardware" && item.id !== requestedCase.id)).slice(0, requestedCase.kind === "hardware" ? 2 : 3);
+      const remainingSoftware = shuffle(cases.filter((item) => item.kind === "software" && item.id !== requestedCase.id)).slice(0, requestedCase.kind === "software" ? 1 : 2);
+      return [requestedCase, ...shuffle([...remainingHardware, ...remainingSoftware])].slice(0, TOTAL_CASES);
+    }
     const hardwareCases = shuffle(cases.filter((item) => item.kind === "hardware")).slice(0, 3);
     const softwareCases = shuffle(cases.filter((item) => item.kind === "software")).slice(0, 2);
     return shuffle([...hardwareCases, ...softwareCases]);
