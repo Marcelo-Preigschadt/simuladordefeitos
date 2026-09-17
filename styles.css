@@ -1445,20 +1445,6 @@ input:focus-visible {
   pointer-events: none;
 }
 
-.motherboard-base::after {
-  position: absolute;
-  right: 4%;
-  bottom: -20px;
-  padding: .22rem .42rem;
-  border: 1px solid rgba(99, 151, 145, .35);
-  border-radius: 4px;
-  color: #6f9692;
-  background: rgba(4, 11, 14, .82);
-  content: "PLACA-MÃE ATX";
-  font: 700 .48rem/1 "SFMono-Regular", Consolas, monospace;
-  letter-spacing: .08em;
-}
-
 .cabinet-slot {
   position: absolute;
   display: block;
