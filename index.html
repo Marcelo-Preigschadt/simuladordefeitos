@@ -14,9 +14,9 @@
       type="image/svg+xml"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%2305080c'/%3E%3Cpath d='M16 17h32v23H16zM24 47h16M32 40v7' fill='none' stroke='%2329e6b1' stroke-width='5' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='43' cy='35' r='2.5' fill='%23ffb454'/%3E%3C/svg%3E"
     />
-    <link rel="stylesheet" href="./styles.css?v=20260916-2" />
-    <script src="./data.js?v=20260916-2" defer></script>
-    <script src="./app.js?v=20260916-2" defer></script>
+    <link rel="stylesheet" href="./styles.css?v=20260917-3" />
+    <script src="./data.js?v=20260917-3" defer></script>
+    <script src="./app.js?v=20260917-3" defer></script>
   </head>
   <body>
     <div class="ambient-grid" aria-hidden="true"></div>
@@ -138,7 +138,7 @@
             <div class="severity-badge" id="severityBadge">NÍVEL 1</div>
           </article>
 
-          <section class="lab-workspace" aria-label="Bancada virtual de manutenção">
+          <section class="lab-workspace" id="labWorkspace" aria-label="Bancada virtual de manutenção">
             <div class="monitor-unit">
               <div class="monitor-label">
                 <span>MONITOR PRINCIPAL</span>
@@ -168,11 +168,34 @@
                 <span class="cabinet-state" id="cabinetState">ENERGIA DESLIGADA</span>
               </div>
               <div class="open-cabinet" id="openCabinet">
-                <div class="case-rail case-rail--top" aria-hidden="true"></div>
-                <div class="case-rail case-rail--bottom" aria-hidden="true"></div>
+                <div class="chassis-inner" aria-hidden="true">
+                  <div class="chassis-lip chassis-lip--top"></div>
+                  <div class="chassis-lip chassis-lip--bottom"></div>
+                  <div class="drive-cage">
+                    <span></span><span></span><span></span>
+                  </div>
+                  <div class="case-fan case-fan--rear">
+                    <span class="fan-frame"></span>
+                    <span class="fan-rotor">
+                      <i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+                    </span>
+                  </div>
+                  <div class="cpu-underlay">
+                    <span class="cpu-chip">CPU</span>
+                    <i></i><i></i><i></i><i></i>
+                  </div>
+                  <div class="case-wiring case-wiring--atx"></div>
+                  <div class="case-wiring case-wiring--sata"></div>
+                  <div class="case-wiring case-wiring--pcie"></div>
+                  <span class="board-debug-led"></span>
+                  <span class="storage-activity-led"></span>
+                  <span class="network-link-led"></span>
+                </div>
                 <div class="cabinet-slots" id="cabinetSlots"></div>
-                <div class="case-cables" aria-hidden="true">
-                  <span></span><span></span><span></span>
+                <div class="chassis-legend" aria-hidden="true">
+                  <span><i class="legend-dot legend-dot--power"></i>12 V</span>
+                  <span><i class="legend-dot legend-dot--data"></i>SATA</span>
+                  <span><i class="legend-dot legend-dot--signal"></i>PCIe</span>
                 </div>
               </div>
               <p class="cabinet-help" id="cabinetHelp">
@@ -272,7 +295,7 @@
             <div class="software-actions" id="softwareActions" hidden></div>
 
             <div class="selected-part" id="selectedPart" hidden>
-              <img id="selectedPartImage" alt="" />
+              <div class="selected-part__visual" id="selectedPartVisual" aria-hidden="true"></div>
               <div>
                 <span>Peça selecionada</span>
                 <strong id="selectedPartName">—</strong>
