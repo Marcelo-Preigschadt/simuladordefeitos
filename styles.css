@@ -1196,8 +1196,8 @@ input:focus-visible {
 
 .cpu-underlay {
   position: absolute;
-  top: 27.2%;
-  left: 31.5%;
+  top: 22.3%;
+  left: 27.2%;
   z-index: 3;
   display: grid;
   width: 20%;
@@ -1339,7 +1339,7 @@ input:focus-visible {
 
 .cabinet-slot--motherboard { top: 9%; left: 7%; z-index: 2; width: 68%; height: 74%; }
 .cabinet-slot--power { bottom: 1%; left: 1%; z-index: 15; width: 37%; height: 21%; }
-.cabinet-slot--cooler { top: 25.5%; left: 29.5%; z-index: 12; width: 24%; aspect-ratio: 1; }
+.cabinet-slot--cooler { top: 20%; left: 24.5%; z-index: 12; width: 27%; aspect-ratio: 1; }
 .cabinet-slot--memory { top: 13%; left: 56%; z-index: 11; width: 12%; height: 39%; }
 .cabinet-slot--storage { top: 20%; right: 1%; z-index: 11; width: 19%; height: 20%; }
 .cabinet-slot--gpu { top: 53%; left: 20%; z-index: 14; width: 58%; height: 17%; }
