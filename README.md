@@ -7,12 +7,16 @@ Simulador educacional de diagnóstico de falhas em computadores, desenvolvido em
 - identificação do participante e da instituição;
 - cinco casos sorteados por sessão, sempre combinando hardware e software;
 - controle virtual de energia do computador;
-- monitor com mensagens de POST, UEFI, recuperação, instalação e sistema;
-- gabinete aberto com imagens dos componentes instalados;
+- monitor com interfaces visuais de POST, UEFI, WinRE, Windows Setup e área de trabalho;
+- gabinete ATX aberto com placa-mãe, processador sob o cooler, fonte, RAM,
+  GPU, placa de rede, HD/SSD, cabos e baias nas posições físicas;
+- ventoinhas, LEDs de diagnóstico e atividade que respondem à energia e ao defeito;
 - substituição direta da peça por arrastar e soltar;
 - alternativa para telas de toque: selecionar a peça e tocar no encaixe;
 - identificação explícita de unidades como **HD / SSD**;
-- procedimentos simulados de instalação do sistema, reparo de boot, instalação
+- instalação interativa do Windows com idioma, início da instalação, seleção do
+  SSD, cópia dos arquivos, reinicialização, OOBE e área de trabalho;
+- procedimentos simulados de reparo de boot, instalação
   de driver, remoção de malware, correção de DNS e ordem de boot;
 - ferramentas de diagnóstico e registro técnico;
 - validação automática da intervenção, erros e pontuação;
