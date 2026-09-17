@@ -29,6 +29,7 @@
     usedTools: new Set(),
     selectedPart: null,
     draggedPart: null,
+    replacedPart: null,
     busy: false,
     caseResolved: false,
     finished: false,
@@ -48,6 +49,9 @@
     "security",
     "setup",
     "artifacts",
+    "windows-setup",
+    "windows-desktop",
+    "winre",
   ];
 
   function cacheDom() {
@@ -70,6 +74,7 @@
       "monitorSignal",
       "monitorScreen",
       "screenContent",
+      "labWorkspace",
       "hardwareView",
       "cabinetState",
       "openCabinet",
@@ -96,7 +101,7 @@
       "partsTray",
       "softwareActions",
       "selectedPart",
-      "selectedPartImage",
+      "selectedPartVisual",
       "selectedPartName",
       "cancelPartButton",
       "casePoints",
@@ -196,6 +201,7 @@
     state.usedTools.clear();
     state.selectedPart = null;
     state.draggedPart = null;
+    state.replacedPart = null;
     state.busy = false;
     state.caseResolved = false;
 
@@ -232,6 +238,8 @@
 
   function configureCaseMode(activeCase) {
     const isHardware = activeCase.kind === "hardware";
+    dom.labWorkspace.classList.toggle("is-hardware-mode", isHardware);
+    dom.labWorkspace.classList.toggle("is-software-mode", !isHardware);
     dom.hardwareView.hidden = !isHardware;
     dom.softwareView.hidden = isHardware;
     dom.partsTray.hidden = !isHardware;
@@ -287,6 +295,8 @@
     if (activeCase.boot === "no-power") {
       state.computerOn = false;
       renderPowerState("fault");
+      dom.openCabinet.classList.add("is-power-failed");
+      window.setTimeout(() => dom.openCabinet.classList.remove("is-power-failed"), 900);
       setMonitor("off", '<span class="screen-off-label">SEM ENERGIA</span>');
       addLog("Nenhuma resposta elétrica; a linha +5VSB não foi detectada.", "error", "PWR");
       showToast("O computador não apresentou nenhum sinal elétrico.", "error");
@@ -447,7 +457,25 @@
     dom.cabinetState.className = `cabinet-state ${isOn ? "is-danger" : "is-safe"}`;
     dom.systemState.textContent = isOn ? "SISTEMA ATIVO" : "DESLIGADO";
     dom.systemState.className = `system-state ${isOn ? "is-ready" : ""}`;
+    updateCabinetVisualState(status);
     refreshInteractiveState();
+  }
+
+  function updateCabinetVisualState(status = "normal") {
+    if (!dom.openCabinet) return;
+    const activeCase = getActiveCase();
+    const faultPart = activeCase?.kind === "hardware" ? activeCase.correctPart : "";
+    const faultResolved = state.replacedPart === faultPart;
+
+    dom.openCabinet.classList.toggle("is-powered", state.computerOn);
+    dom.openCabinet.classList.toggle("is-fault-active", Boolean(state.computerOn && faultPart && !faultResolved));
+    dom.openCabinet.dataset.faultPart = faultResolved ? "" : faultPart;
+    dom.openCabinet.dataset.powerStatus = status;
+
+    dom.cabinetSlots.querySelectorAll(".cabinet-slot").forEach((slot) => {
+      slot.classList.toggle("is-faulty", state.computerOn && !faultResolved && slot.dataset.partId === faultPart);
+      slot.classList.toggle("is-repaired", state.replacedPart === slot.dataset.partId);
+    });
   }
 
   function renderCabinet() {
@@ -456,23 +484,19 @@
     hardwareParts.forEach((part) => {
       const slot = document.createElement("button");
       slot.type = "button";
-      slot.className = "cabinet-slot";
+      slot.className = `cabinet-slot cabinet-slot--${part.id}`;
       slot.dataset.partId = part.id;
       slot.setAttribute("aria-label", `${part.name} instalado. Encaixe para peça de reposição.`);
 
-      const image = document.createElement("img");
-      image.src = part.icon;
-      image.alt = "";
-      image.draggable = false;
+      const visual = document.createElement("span");
+      visual.className = `hardware-visual hardware-visual--${part.id}`;
+      visual.setAttribute("aria-hidden", "true");
+      visual.innerHTML = hardwareVisualMarkup(part.id, "installed");
 
-      const text = document.createElement("span");
-      text.className = "cabinet-slot__text";
-      const name = document.createElement("strong");
-      name.textContent = part.name;
-      const status = document.createElement("span");
-      status.textContent = "INSTALADO / SUBSTITUIR AQUI";
-      text.append(name, status);
-      slot.append(image, text);
+      const tooltip = document.createElement("span");
+      tooltip.className = "component-tooltip";
+      tooltip.textContent = part.name;
+      slot.append(visual, tooltip);
 
       slot.addEventListener("click", () => {
         if (!state.selectedPart) {
@@ -497,6 +521,7 @@
 
       dom.cabinetSlots.append(slot);
     });
+    updateCabinetVisualState();
   }
 
   function renderPartsTray() {
@@ -511,23 +536,15 @@
       button.setAttribute("aria-label", `Selecionar ${part.name} de reposição`);
 
       const iconHolder = document.createElement("span");
-      iconHolder.className = part.alternateIcon ? "part-card__icons" : "part-card__icon";
-      const image = document.createElement("img");
-      image.src = part.icon;
-      image.alt = "";
-      image.draggable = false;
-      iconHolder.append(image);
-      if (part.alternateIcon) {
-        const alternateImage = document.createElement("img");
-        alternateImage.src = part.alternateIcon;
-        alternateImage.alt = "";
-        alternateImage.draggable = false;
-        iconHolder.append(alternateImage);
-      }
+      iconHolder.className = `part-card__visual part-card__visual--${part.id}`;
+      iconHolder.setAttribute("aria-hidden", "true");
+      iconHolder.innerHTML = hardwareVisualMarkup(part.id, "replacement");
 
       const label = document.createElement("span");
+      label.className = "part-card__label";
       label.textContent = part.name;
       const code = document.createElement("small");
+      code.className = "part-card__code";
       code.textContent = part.short;
       button.append(iconHolder, label, code);
 
@@ -559,8 +576,7 @@
 
     state.selectedPart = partId;
     dom.selectedPart.hidden = false;
-    dom.selectedPartImage.src = part.icon;
-    dom.selectedPartImage.alt = "";
+    dom.selectedPartVisual.innerHTML = hardwareVisualMarkup(part.id, "selected");
     dom.selectedPartName.textContent = part.name;
     dom.cabinetHelp.textContent = `Agora coloque ${part.name} no encaixe destacado.`;
 
@@ -575,9 +591,62 @@
   function clearSelectedPart() {
     state.selectedPart = null;
     dom.selectedPart.hidden = true;
+    dom.selectedPartVisual.replaceChildren();
     dom.cabinetHelp.textContent = "Arraste uma peça para o encaixe correspondente ou use dois toques.";
     document.querySelectorAll(".part-card.is-selected").forEach((button) => button.classList.remove("is-selected"));
     document.querySelectorAll(".cabinet-slot.is-compatible").forEach((slot) => slot.classList.remove("is-compatible"));
+  }
+
+  function hardwareVisualMarkup(partId, context = "installed") {
+    const fan = (modifier = "") => `<span class="fan-assembly ${modifier}"><span class="fan-ring"></span><span class="fan-rotor"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><b></b></span></span>`;
+
+    const visuals = {
+      motherboard: `
+        <svg class="motherboard-svg" viewBox="0 0 300 340" preserveAspectRatio="none" role="presentation">
+          <defs>
+            <linearGradient id="pcb-${context}" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#123f3c"/><stop offset="1" stop-color="#071d23"/></linearGradient>
+            <linearGradient id="metal-${context}" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#c9d4d7"/><stop offset=".48" stop-color="#53636b"/><stop offset="1" stop-color="#d8e1e2"/></linearGradient>
+          </defs>
+          <path d="M8 8h255l29 29v295H8z" fill="url(#pcb-${context})" stroke="#3d7771" stroke-width="4"/>
+          <g fill="none" stroke="#2b7770" stroke-width="2" opacity=".7">
+            <path d="M23 180h55l22-22h84l25-32h62"/><path d="M20 232h66l26 25h152"/><path d="M35 86h48l31-31h93l22 22h48"/><path d="M47 303v-30h92l27 26h90"/><path d="M169 20v35l-26 21v55"/>
+          </g>
+          <g fill="#7ca39d"><circle cx="25" cy="25" r="5"/><circle cx="274" cy="48" r="5"/><circle cx="274" cy="313" r="5"/><circle cx="25" cy="313" r="5"/></g>
+          <rect x="82" y="58" width="92" height="92" rx="5" fill="#183138" stroke="url(#metal-${context})" stroke-width="5"/>
+          <rect x="92" y="68" width="72" height="72" fill="#c6b57d" stroke="#59656a" stroke-width="2"/>
+          <g fill="#202b31" stroke="#75858b"><rect x="191" y="35" width="9" height="150"/><rect x="207" y="35" width="9" height="150"/><rect x="223" y="35" width="9" height="150"/><rect x="239" y="35" width="9" height="150"/></g>
+          <g fill="#c8d1d3"><rect x="17" y="43" width="48" height="21"/><rect x="17" y="70" width="48" height="28"/><rect x="17" y="104" width="48" height="18"/></g>
+          <rect x="30" y="194" width="228" height="13" rx="2" fill="#e7e9df"/><rect x="30" y="218" width="228" height="9" rx="2" fill="#263940"/>
+          <rect x="30" y="244" width="160" height="10" rx="2" fill="#e7e9df"/><rect x="30" y="267" width="116" height="9" rx="2" fill="#263940"/>
+          <g fill="#aebcc0" stroke="#4e5d62"><circle cx="72" cy="166" r="8"/><circle cx="91" cy="166" r="8"/><circle cx="166" cy="168" r="8"/><circle cx="178" cy="168" r="8"/><circle cx="262" cy="205" r="7"/></g>
+          <rect x="196" y="238" width="65" height="54" rx="4" fill="#15272d" stroke="#76868b"/><path d="M205 248h47v34h-47z" fill="#263c42"/><text x="228" y="271" fill="#89a5a4" font-size="9" text-anchor="middle">CHIPSET</text>
+          <g fill="#161d20" stroke="#859398"><rect x="270" y="97" width="17" height="13"/><rect x="270" y="116" width="17" height="13"/><rect x="270" y="135" width="17" height="13"/><rect x="270" y="154" width="17" height="13"/></g>
+          <text x="25" y="326" fill="#7fb7af" font-size="10" font-family="monospace">SIMULAB B650M</text>
+        </svg>`,
+      power: `
+        <span class="psu-unit">
+          <span class="psu-face">${fan("psu-fan")}</span>
+          <span class="psu-side"><b>ATX</b><em>650 W</em><small>80 PLUS</small></span>
+          <span class="psu-socket"></span><span class="psu-switch"></span>
+          <span class="psu-leads"><i></i><i></i><i></i><i></i></span>
+        </span>`,
+      cooler: `
+        <span class="cpu-cooler">
+          <span class="heatsink"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+          ${fan("cpu-fan")}
+          <span class="cooler-clips"><i></i><i></i><i></i><i></i></span>
+        </span>`,
+      memory: `
+        <span class="ram-kit"><span class="ram-stick"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><b>DDR4</b></span><span class="ram-stick"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><b>DDR4</b></span></span>`,
+      storage: `
+        <span class="storage-kit"><span class="ssd-drive"><i></i><b>SSD</b><small>480 GB</small><em></em></span>${context === "replacement" ? '<span class="hdd-drive"><i></i><b>HDD</b><small>1 TB</small><em></em></span>' : ""}</span>`,
+      gpu: `
+        <span class="gpu-board"><span class="gpu-backplate"></span><span class="gpu-bracket"></span><span class="gpu-power"></span>${fan("gpu-fan gpu-fan--one")}${fan("gpu-fan gpu-fan--two")}<span class="gpu-brand">GRAPHICS</span><span class="gpu-edge"></span></span>`,
+      network: `
+        <span class="nic-board"><span class="nic-bracket"></span><span class="nic-port"><i></i><i></i></span><span class="nic-chip">GbE</span><span class="nic-components"><i></i><i></i><i></i><i></i></span><span class="nic-edge"></span></span>`,
+    };
+
+    return visuals[partId] || "";
   }
 
   async function attemptHardwareReplacement(partId, slotId) {
@@ -605,13 +674,17 @@
     const token = state.sequenceToken;
     refreshInteractiveState();
     const slot = dom.cabinetSlots.querySelector(`[data-part-id="${partId}"]`);
-    slot?.classList.add("is-replacing");
+    slot?.classList.add("is-removing");
     addLog(`Removendo ${part.name} instalado e colocando a peça de reposição.`, "info", "REPARO");
     showToast(`Substituindo ${part.name}...`, "info");
 
-    await wait(700);
+    await wait(480);
     if (token !== state.sequenceToken) return;
-    slot?.classList.remove("is-replacing");
+    slot?.classList.remove("is-removing");
+    slot?.classList.add("is-installing");
+    await wait(520);
+    if (token !== state.sequenceToken) return;
+    slot?.classList.remove("is-installing");
 
     if (partId !== activeCase.correctPart) {
       registerWrongAction(`A troca de ${part.name} não resolveu a ocorrência.`);
@@ -622,6 +695,7 @@
     }
 
     clearSelectedPart();
+    state.replacedPart = partId;
     addLog(`${part.name} substituído. Reconectando energia para o teste final.`, "success", "REPARO");
     state.computerOn = true;
     renderPowerState();
@@ -634,8 +708,8 @@
     await wait(1050);
     if (token !== state.sequenceToken) return;
     setMonitor(
-      "desktop",
-      screenWindow("Diagnóstico concluído", "Hardware reconhecido e teste de inicialização aprovado", 100, [`${part.name}: operacional`, "POST concluído sem erros"]),
+      "windows-desktop",
+      windowsDesktopScreen(`${part.name} reconhecido; POST concluído sem erros`),
       "SISTEMA ESTÁVEL",
     );
     addLog("POST e teste funcional concluídos sem erros.", "success", "OK");
@@ -705,10 +779,18 @@
       return;
     }
 
+    if (actionId === "install-os") {
+      await runWindowsInstallation(token, action);
+      if (token !== state.sequenceToken) return;
+      addLog("Windows instalado, configurado e iniciado pelo SSD.", "success", "OK");
+      completeCase();
+      return;
+    }
+
     const steps = simulations[actionId] || [];
-    for (const step of steps) {
+    for (const [stepIndex, step] of steps.entries()) {
       if (token !== state.sequenceToken || !state.computerOn) return;
-      renderSimulationStep(step);
+      renderSimulationStep(actionId, step, stepIndex);
       addLog(`${step.title}: ${step.detail}`, step.mode === "success" ? "success" : "info", action.short);
       await wait(step.delay);
     }
@@ -718,7 +800,174 @@
     completeCase();
   }
 
-  function renderSimulationStep(step) {
+  async function runWindowsInstallation(token, action) {
+    setMonitor(
+      "windows-setup",
+      `<div class="windows-boot">${windowsLogo()}<div class="boot-spinner"><i></i><i></i><i></i><i></i><i></i></div><p>Inicializando pelo pendrive de instalação...</p></div>`,
+      "BOOT USB",
+    );
+    addLog("Mídia USB inicializada em modo UEFI.", "info", action.short);
+    await wait(900);
+    if (token !== state.sequenceToken) return;
+
+    setMonitor(
+      "windows-setup",
+      windowsSetupFrame(
+        "Instalação do Windows 11",
+        `<p class="win-lead">Idioma e preferências</p>
+         <label class="win-field"><span>Idioma a instalar</span><strong>Português (Brasil)</strong></label>
+         <label class="win-field"><span>Formato de hora e moeda</span><strong>Português (Brasil)</strong></label>
+         <label class="win-field"><span>Teclado ou método de entrada</span><strong>Português (Brasil ABNT2)</strong></label>`,
+        `<button class="win-primary" id="winLanguageNext" type="button">Avançar</button>`,
+      ),
+      "WINDOWS SETUP",
+    );
+    addLog("Instalador aguardando a confirmação de idioma e teclado.", "info", action.short);
+    await waitForMonitorButton("winLanguageNext", token);
+    if (token !== state.sequenceToken) return;
+
+    setMonitor(
+      "windows-setup",
+      windowsSetupFrame(
+        "Instalação do Windows 11",
+        `<div class="win-install-home">${windowsLogo()}<h3>Windows 11 Education</h3><p>O instalador copiará os arquivos e preparará o computador para o primeiro uso.</p></div>`,
+        `<button class="win-primary win-primary--large" id="winInstallNow" type="button">Instalar agora</button><button class="win-link" type="button" disabled>Reparar o computador</button>`,
+      ),
+      "WINDOWS SETUP",
+    );
+    await waitForMonitorButton("winInstallNow", token);
+    if (token !== state.sequenceToken) return;
+    addLog("Instalação do Windows 11 Education iniciada.", "info", action.short);
+
+    setMonitor(
+      "windows-setup",
+      windowsSetupFrame(
+        "Onde deseja instalar o Windows?",
+        `<div class="win-disk-table">
+          <div class="win-disk-table__head"><span>Nome</span><span>Tamanho total</span><span>Espaço livre</span></div>
+          <button class="win-disk-row" id="winDisk0" type="button"><span><i class="disk-icon"></i>Unidade 0 — Espaço não alocado</span><span>447,1 GB</span><span>447,1 GB</span></button>
+          <div class="win-disk-tools"><span>↻ Atualizar</span><span>＋ Novo</span><span>⌫ Excluir</span><span>▣ Formatar</span></div>
+        </div>
+        <p class="win-disk-help" id="winDiskHelp">Selecione a unidade onde o sistema será instalado.</p>`,
+        `<button class="win-primary" id="winDiskNext" type="button" disabled>Avançar</button>`,
+      ),
+      "SELEÇÃO DO SSD",
+    );
+
+    const diskRow = dom.screenContent.querySelector("#winDisk0");
+    const diskNext = dom.screenContent.querySelector("#winDiskNext");
+    diskRow.addEventListener("click", () => {
+      diskRow.classList.add("is-selected");
+      diskNext.disabled = false;
+      dom.screenContent.querySelector("#winDiskHelp").textContent = "O instalador criará automaticamente as partições necessárias.";
+      addLog("SSD de 447,1 GB selecionado como destino.", "info", "DISK");
+    });
+    await waitForMonitorButton("winDiskNext", token);
+    if (token !== state.sequenceToken) return;
+
+    const installStages = [
+      [8, "Copiando arquivos do Windows", 1],
+      [29, "Preparando arquivos para instalação", 2],
+      [57, "Instalando recursos", 3],
+      [82, "Instalando atualizações", 4],
+      [100, "Finalizando", 5],
+    ];
+    for (const [progress, label, completed] of installStages) {
+      setMonitor("windows-setup", windowsInstallProgress(progress, label, completed), `${progress}%`);
+      addLog(`${label}: ${progress}%`, progress === 100 ? "success" : "info", action.short);
+      await wait(720);
+      if (token !== state.sequenceToken) return;
+    }
+
+    setMonitor(
+      "windows-setup",
+      `<div class="windows-boot">${windowsLogo()}<h3>O computador será reiniciado</h3><p>Não remova o pendrive até a reinicialização.</p><div class="restart-ring"></div></div>`,
+      "REINICIANDO",
+    );
+    await wait(1100);
+    if (token !== state.sequenceToken) return;
+
+    setMonitor(
+      "windows-setup",
+      `<div class="windows-oobe"><div class="oobe-glow"></div><div class="oobe-card"><p class="oobe-kicker">Configuração do Windows</p><h3>Esta é a região correta?</h3><button class="oobe-option is-selected" type="button">Brasil</button><button class="win-primary" id="winRegionYes" type="button">Sim</button></div></div>`,
+      "PRIMEIRA CONFIGURAÇÃO",
+    );
+    await waitForMonitorButton("winRegionYes", token);
+    if (token !== state.sequenceToken) return;
+
+    setMonitor(
+      "windows-setup",
+      `<div class="windows-oobe"><div class="oobe-glow"></div><div class="oobe-card"><p class="oobe-kicker">Layout do teclado</p><h3>Este é o layout correto?</h3><button class="oobe-option is-selected" type="button">Português (Brasil ABNT2)</button><button class="win-primary" id="winKeyboardYes" type="button">Sim</button></div></div>`,
+      "PRIMEIRA CONFIGURAÇÃO",
+    );
+    await waitForMonitorButton("winKeyboardYes", token);
+    if (token !== state.sequenceToken) return;
+
+    setMonitor(
+      "windows-setup",
+      `<div class="windows-oobe"><div class="oobe-glow"></div><div class="oobe-card"><p class="oobe-kicker">Nome do dispositivo</p><h3>Como deseja chamar este computador?</h3><input class="oobe-input" value="LAB-PC-01" aria-label="Nome do computador" /><button class="win-primary" id="winDeviceNext" type="button">Avançar</button></div></div>`,
+      "PRIMEIRA CONFIGURAÇÃO",
+    );
+    await waitForMonitorButton("winDeviceNext", token);
+    if (token !== state.sequenceToken) return;
+
+    setMonitor(
+      "windows-setup",
+      `<div class="windows-boot windows-boot--finishing">${windowsLogo()}<h3>Estamos preparando tudo para você</h3><p>Não desligue o computador.</p><div class="boot-spinner"><i></i><i></i><i></i><i></i><i></i></div></div>`,
+      "CONFIGURANDO",
+    );
+    await wait(1200);
+    if (token !== state.sequenceToken) return;
+
+    setMonitor("windows-desktop", windowsDesktopScreen("Windows 11 instalado e pronto para uso"), "SISTEMA ATIVO");
+    addLog("Primeira inicialização concluída; área de trabalho carregada.", "success", action.short);
+    await wait(1600);
+  }
+
+  function waitForMonitorButton(buttonId, token) {
+    return new Promise((resolve) => {
+      const button = dom.screenContent.querySelector(`#${buttonId}`);
+      if (!button) {
+        resolve(false);
+        return;
+      }
+      button.addEventListener("click", () => {
+        if (token === state.sequenceToken) resolve(true);
+      }, { once: true });
+    });
+  }
+
+  function windowsLogo() {
+    return '<span class="windows-logo" aria-hidden="true"><i></i><i></i><i></i><i></i></span>';
+  }
+
+  function windowsSetupFrame(title, body, footer) {
+    return `<div class="win-setup-frame"><header>${windowsLogo()}<strong>${title}</strong></header><main>${body}</main><footer>${footer}</footer></div>`;
+  }
+
+  function windowsInstallProgress(progress, activeLabel, completed) {
+    const steps = ["Copiando arquivos do Windows", "Preparando arquivos para instalação", "Instalando recursos", "Instalando atualizações", "Finalizando"];
+    const currentIndex = completed - 1;
+    const list = steps.map((step, index) => `<li class="${index < currentIndex ? "is-complete" : index === currentIndex ? "is-active" : ""}"><i>${index < currentIndex ? "✓" : ""}</i><span>${step}</span>${index === currentIndex ? `<b>${progress}%</b>` : ""}</li>`).join("");
+    return windowsSetupFrame("Instalando o Windows", `<div class="win-installing"><h3>${activeLabel}</h3><p>O computador reiniciará várias vezes durante o processo.</p><ul>${list}</ul><div class="win-copy-progress"><span style="width:${progress}%"></span></div></div>`, '<span class="win-footer-note">Status: instalando no SSD — Unidade 0</span>');
+  }
+
+  function windowsDesktopScreen(notification = "") {
+    return `<div class="windows-desktop"><div class="desktop-wallpaper"><span class="wallpaper-orb wallpaper-orb--one"></span><span class="wallpaper-orb wallpaper-orb--two"></span></div><div class="desktop-icons"><span><i>🗑</i>Lixeira</span><span><i>📁</i>Explorador</span></div>${notification ? `<div class="desktop-notification"><b>Configuração concluída</b><span>${escapeHtml(notification)}</span></div>` : ""}<div class="windows-taskbar"><span class="taskbar-weather">☀ 22 °C</span><span class="taskbar-center">${windowsLogo()}<i>⌕</i><i>▣</i><i>◉</i></span><span class="taskbar-clock">10:42<br>17/09/2026</span></div></div>`;
+  }
+
+  function renderSimulationStep(actionId, step, stepIndex) {
+    if (step.mode === "success") {
+      setMonitor("windows-desktop", windowsDesktopScreen(step.detail), "SISTEMA ATIVO");
+      return;
+    }
+
+    if (actionId === "repair-boot") {
+      const lines = step.lines.map((line) => `<span>${escapeHtml(line)}</span>`).join("");
+      setMonitor("winre", `<div class="winre-screen"><header>Ambiente de Recuperação do Windows</header><main><div class="winre-title"><i>›_</i><span><b>${escapeHtml(step.title)}</b><small>${escapeHtml(step.detail)}</small></span></div><div class="winre-terminal">${lines}<i class="terminal-cursor"></i></div><div class="winre-progress"><span style="width:${step.progress}%"></span></div></main></div>`, `${step.progress}%`);
+      return;
+    }
+
     const mode = step.mode === "success" ? "desktop" : step.mode;
     setMonitor(
       mode,
