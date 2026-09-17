@@ -337,32 +337,50 @@
       "disk-failure": () => {
         setMonitor(
           "bios",
-          textScreen(
-            "S.M.A.R.T. STATUS BAD",
-            "SATA Port 1: SSD 480 GB\nStatus: BAD — Backup and Replace\n\nPressione F1 para entrar no Setup.",
-            true,
-          ),
-          "ALERTA UEFI",
+          uefiScreen({
+            tab: "MAIN",
+            title: "S.M.A.R.T. STATUS BAD",
+            warning: "Falha prevista na unidade. Faça backup e substitua o disco.",
+            rows: [
+              ["SATA Port 1", "SIMULAB SSD 480 GB"],
+              ["S.M.A.R.T. Status", "BAD", "danger"],
+              ["Reallocated Sectors", "184", "danger"],
+              ["Pending Sectors", "37", "danger"],
+            ],
+            footer: "F1  Setup    F10  Save & Exit",
+          }),
+          "UEFI · ALERTA SMART",
         );
         addLog("UEFI: S.M.A.R.T. Status BAD no HD/SSD SATA.", "error", "DISK");
       },
       "memory-error": () => {
-        setMonitor("error", '<span class="screen-status-label">SEM SINAL DE VÍDEO</span>', "SEM SINAL");
+        setMonitor("error", noSignalScreen("POST interrompido", "LED DRAM aceso · 3 bipes longos"), "SEM SINAL");
         addLog("Três bipes longos repetidos; POST interrompido no teste de memória.", "error", "POST");
       },
       overheat: () => {
         setMonitor(
           "bios",
-          textScreen("CPU FAN ERROR", "CPU Fan Speed: 0 RPM\nCPU Temperature: 96 °C\n\nSystem will shut down to prevent damage.", true),
-          "ALERTA TÉRMICO",
+          uefiScreen({
+            tab: "MONITOR",
+            title: "CPU FAN ERROR",
+            warning: "Proteção térmica ativa. O sistema será desligado.",
+            rows: [
+              ["CPU Temperature", "96 °C", "danger"],
+              ["CPU Fan Speed", "0 RPM", "danger"],
+              ["CPU Core Voltage", "1.184 V"],
+              ["Shutdown Temperature", "95 °C"],
+            ],
+            footer: "F1  Setup    CPU_FAN  N/A",
+          }),
+          "UEFI · MONITOR TÉRMICO",
         );
         addLog("CPU_FAN registra 0 RPM; proteção térmica acionada.", "error", "TEMP");
         window.setTimeout(() => {
           if (!state.computerOn || token !== state.sequenceToken || state.busy) return;
           setMonitor(
             "critical",
-            textScreen("DESLIGAMENTO DE PROTEÇÃO", "Temperatura crítica detectada.\nA energia foi interrompida para proteger o processador.", true),
-            "PROTEÇÃO",
+            protectionScreen("CPU over temperature", "Energia interrompida pela proteção térmica da placa-mãe."),
+            "DESLIGAMENTO TÉRMICO",
           );
           state.computerOn = false;
           renderPowerState("fault");
@@ -372,64 +390,64 @@
       "video-artifacts": () => {
         setMonitor(
           "artifacts",
-          textScreen("Falha no adaptador gráfico", "O driver de vídeo parou de responder e se recuperou.\nCódigo: VIDEO_TDR_FAILURE", true),
-          "SINAL INSTÁVEL",
+          videoFailureScreen(),
+          "GPU · SINAL CORROMPIDO",
         );
         addLog("Artefatos e reinicialização do driver gráfico detectados.", "error", "GPU");
       },
       "network-card-failure": () => {
         setMonitor(
           "desktop",
-          screenWindow("Status da Rede", "Cabo de rede desconectado", 100, ["Nenhum adaptador Ethernet disponível", "LED de link: apagado"]),
-          "SISTEMA ATIVO",
+          networkStatusScreen(false, "hardware"),
+          "WINDOWS · SEM ADAPTADOR",
         );
         addLog("Sistema iniciado, mas nenhum enlace Ethernet foi estabelecido.", "warning", "NET");
       },
       "no-os": () => {
         setMonitor(
           "bios",
-          textScreen("NO BOOTABLE DEVICE", "O HD/SSD foi detectado, mas não contém um sistema inicializável.\n\nInsert boot media and press any key.", true),
-          "SEM SISTEMA",
+          noBootDeviceScreen("SIMULAB SSD 480 GB", "Nenhum carregador de sistema foi encontrado nesta unidade."),
+          "UEFI · SEM SISTEMA",
         );
         addLog("HD/SSD detectado sem sistema operacional inicializável.", "warning", "BOOT");
       },
       "repair-loop": () => {
         setMonitor(
           "error",
-          screenWindow("Recuperação", "O PC precisa ser reparado — código 0xc0000098", 18, ["O arquivo de configuração de inicialização não contém informações válidas.", "Pressione F1 para entrar no Ambiente de Recuperação."]),
-          "RECUPERAÇÃO",
+          bootRecoveryScreen(),
+          "WINDOWS BOOT MANAGER",
         );
         addLog("Windows Boot Manager retornou o código 0xc0000098.", "error", "BOOT");
       },
       "driver-missing": () => {
         setMonitor(
           "device",
-          screenWindow("Gerenciador de Dispositivos", "Controlador Ethernet — dispositivo desconhecido", 100, ["Os drivers deste dispositivo não estão instalados. (Código 28)", "Hardware ID: PCI\\VEN_10EC&DEV_8168"]),
-          "SISTEMA ATIVO",
+          deviceManagerScreen("missing", 0),
+          "WINDOWS · CÓDIGO 28",
         );
         addLog("Controlador Ethernet identificado sem driver: código 28.", "warning", "DRV");
       },
       malware: () => {
         setMonitor(
           "security",
-          screenWindow("Gerenciador de Tarefas", "Uso de CPU: 96%", 96, ["update_service.exe — 89,4%", "Várias janelas indesejadas foram abertas."]),
-          "SISTEMA LENTO",
+          taskManagerScreen(),
+          "WINDOWS · CPU 96%",
         );
         addLog("Processo desconhecido mantém carga alta e conexões externas.", "error", "SEC");
       },
       "dns-error": () => {
         setMonitor(
           "desktop",
-          screenWindow("Navegador", "Não foi possível encontrar o endereço DNS", 100, ["ERR_NAME_NOT_RESOLVED", "A conexão por endereço IP continua respondendo."]),
-          "REDE LIMITADA",
+          dnsBrowserScreen(false),
+          "NAVEGADOR · ERRO DNS",
         );
         addLog("Conectividade IP ativa; resolução de nomes falhou.", "warning", "DNS");
       },
       "usb-boot": () => {
         setMonitor(
           "bios",
-          textScreen("MISSING OPERATING SYSTEM", "Boot device: USB Mass Storage\nNo operating system found.\n\nRemove media or change boot priority.", true),
-          "BOOT USB",
+          bootPriorityScreen(["USB Mass Storage", "Windows Boot Manager", "Network PXE"], "usb-error"),
+          "UEFI · BOOT USB",
         );
         addLog("UEFI tentou iniciar pelo dispositivo USB conectado.", "warning", "UEFI");
       },
@@ -438,7 +456,7 @@
     const renderOutcome = outcomes[activeCase.boot];
     if (renderOutcome) renderOutcome();
     else {
-      setMonitor("desktop", screenWindow("Sistema", "Área de trabalho carregada", 100, ["Nenhum alerta registrado."]), "SISTEMA ATIVO");
+      setMonitor("bios", postScreen("POST concluído", ["CPU: OK", "Memory: OK", "Storage: OK", "Boot device: Windows Boot Manager"]), "POST · OK");
       addLog("Sistema operacional iniciado.", "success", "BOOT");
     }
   }
@@ -488,7 +506,13 @@
   function renderCabinet() {
     dom.cabinetSlots.replaceChildren();
 
-    hardwareParts.forEach((part) => {
+    const board = document.createElement("div");
+    board.className = "motherboard-base";
+    board.setAttribute("aria-label", "Placa-mãe ATX instalada");
+    board.innerHTML = `<span class="hardware-visual hardware-visual--motherboard" aria-hidden="true">${hardwareVisualMarkup("motherboard", "base")}</span>`;
+    dom.cabinetSlots.append(board);
+
+    hardwareParts.filter((part) => part.id !== "motherboard").forEach((part) => {
       const slot = document.createElement("button");
       slot.type = "button";
       slot.className = `cabinet-slot cabinet-slot--${part.id}`;
@@ -534,7 +558,7 @@
   function renderPartsTray() {
     dom.partsTray.replaceChildren();
 
-    hardwareParts.forEach((part) => {
+    hardwareParts.filter((part) => part.id !== "motherboard").forEach((part) => {
       const button = document.createElement("button");
       button.type = "button";
       button.className = "part-card";
@@ -609,26 +633,35 @@
 
     const visuals = {
       motherboard: `
-        <svg class="motherboard-svg" viewBox="0 0 300 340" preserveAspectRatio="none" role="presentation">
+        <svg class="motherboard-svg" viewBox="0 0 460 410" preserveAspectRatio="none" role="presentation">
           <defs>
             <linearGradient id="pcb-${context}" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#123f3c"/><stop offset="1" stop-color="#071d23"/></linearGradient>
             <linearGradient id="metal-${context}" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#c9d4d7"/><stop offset=".48" stop-color="#53636b"/><stop offset="1" stop-color="#d8e1e2"/></linearGradient>
+            <pattern id="pins-${context}" width="8" height="8" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="1" fill="#638f86" opacity=".65"/></pattern>
           </defs>
-          <path d="M8 8h255l29 29v295H8z" fill="url(#pcb-${context})" stroke="#3d7771" stroke-width="4"/>
-          <g fill="none" stroke="#2b7770" stroke-width="2" opacity=".7">
-            <path d="M23 180h55l22-22h84l25-32h62"/><path d="M20 232h66l26 25h152"/><path d="M35 86h48l31-31h93l22 22h48"/><path d="M47 303v-30h92l27 26h90"/><path d="M169 20v35l-26 21v55"/>
+          <path d="M8 8h408l35 35v359H8z" fill="url(#pcb-${context})" stroke="#4d8f86" stroke-width="5"/>
+          <path d="M20 20h384l33 31v337H20z" fill="url(#pins-${context})" opacity=".28"/>
+          <g fill="none" stroke="#24776e" stroke-width="2" opacity=".68">
+            <path d="M36 225h88l28-27h128l34-44h101"/><path d="M34 294h96l35 37h240"/><path d="M46 108h77l39-42h146l31 31h80"/><path d="M68 370v-38h138l41 34h138"/><path d="M261 25v47l-39 28v91"/><path d="M335 72v168l-25 26"/>
           </g>
-          <g fill="#7ca39d"><circle cx="25" cy="25" r="5"/><circle cx="274" cy="48" r="5"/><circle cx="274" cy="313" r="5"/><circle cx="25" cy="313" r="5"/></g>
-          <rect x="82" y="58" width="92" height="92" rx="5" fill="#183138" stroke="url(#metal-${context})" stroke-width="5"/>
-          <rect x="92" y="68" width="72" height="72" fill="#c6b57d" stroke="#59656a" stroke-width="2"/>
-          <g fill="#202b31" stroke="#75858b"><rect x="191" y="35" width="9" height="150"/><rect x="207" y="35" width="9" height="150"/><rect x="223" y="35" width="9" height="150"/><rect x="239" y="35" width="9" height="150"/></g>
-          <g fill="#c8d1d3"><rect x="17" y="43" width="48" height="21"/><rect x="17" y="70" width="48" height="28"/><rect x="17" y="104" width="48" height="18"/></g>
-          <rect x="30" y="194" width="228" height="13" rx="2" fill="#e7e9df"/><rect x="30" y="218" width="228" height="9" rx="2" fill="#263940"/>
-          <rect x="30" y="244" width="160" height="10" rx="2" fill="#e7e9df"/><rect x="30" y="267" width="116" height="9" rx="2" fill="#263940"/>
-          <g fill="#aebcc0" stroke="#4e5d62"><circle cx="72" cy="166" r="8"/><circle cx="91" cy="166" r="8"/><circle cx="166" cy="168" r="8"/><circle cx="178" cy="168" r="8"/><circle cx="262" cy="205" r="7"/></g>
-          <rect x="196" y="238" width="65" height="54" rx="4" fill="#15272d" stroke="#76868b"/><path d="M205 248h47v34h-47z" fill="#263c42"/><text x="228" y="271" fill="#89a5a4" font-size="9" text-anchor="middle">CHIPSET</text>
-          <g fill="#161d20" stroke="#859398"><rect x="270" y="97" width="17" height="13"/><rect x="270" y="116" width="17" height="13"/><rect x="270" y="135" width="17" height="13"/><rect x="270" y="154" width="17" height="13"/></g>
-          <text x="25" y="326" fill="#7fb7af" font-size="10" font-family="monospace">SIMULAB B650M</text>
+          <g fill="#8fb4ad"><circle cx="28" cy="28" r="6"/><circle cx="421" cy="57" r="6"/><circle cx="421" cy="374" r="6"/><circle cx="28" cy="374" r="6"/><circle cx="235" cy="386" r="5"/></g>
+          <g fill="#c6d0d1" stroke="#607179" stroke-width="2"><rect x="17" y="48" width="61" height="27"/><rect x="17" y="81" width="61" height="34"/><rect x="17" y="121" width="61" height="23"/><rect x="17" y="151" width="61" height="23"/></g>
+          <g fill="#24353b" stroke="#71858a"><rect x="91" y="32" width="115" height="25" rx="3"/><rect x="91" y="64" width="44" height="112" rx="3"/></g>
+          <g fill="#687a7e"><rect x="100" y="37" width="13" height="15"/><rect x="119" y="37" width="13" height="15"/><rect x="138" y="37" width="13" height="15"/><rect x="157" y="37" width="13" height="15"/><rect x="176" y="37" width="13" height="15"/></g>
+          <rect x="156" y="78" width="126" height="126" rx="7" fill="#13272d" stroke="url(#metal-${context})" stroke-width="6"/>
+          <rect x="169" y="91" width="100" height="100" rx="3" fill="#111d21" stroke="#7f9397" stroke-width="2"/>
+          <path d="M175 98h88v86h-88z" fill="none" stroke="#435a60"/><path d="M171 122h-10v36h10M267 102h10v64h-10" fill="none" stroke="#9ca9ac" stroke-width="3"/>
+          <g fill="#1b2a30" stroke="#899a9e" stroke-width="2"><rect x="301" y="40" width="14" height="186"/><rect x="325" y="40" width="14" height="186"/><rect x="349" y="40" width="14" height="186"/><rect x="373" y="40" width="14" height="186"/></g>
+          <g fill="#d1d9d8"><path d="M299 37h18v6h-18zM299 223h18v6h-18z"/><path d="M323 37h18v6h-18zM323 223h18v6h-18z"/><path d="M347 37h18v6h-18zM347 223h18v6h-18z"/><path d="M371 37h18v6h-18zM371 223h18v6h-18z"/></g>
+          <rect x="408" y="91" width="28" height="118" rx="2" fill="#171f22" stroke="#74858a"/><g fill="#b4bdbe"><rect x="413" y="98" width="6" height="9"/><rect x="423" y="98" width="6" height="9"/><rect x="413" y="113" width="6" height="9"/><rect x="423" y="113" width="6" height="9"/></g>
+          <rect x="43" y="234" width="361" height="18" rx="2" fill="#e8ece7"/><rect x="54" y="239" width="288" height="8" fill="#637277"/><path d="M184 234h12v18h-12z" fill="#0b1519"/>
+          <rect x="43" y="271" width="271" height="12" rx="2" fill="#253940"/><rect x="43" y="304" width="230" height="14" rx="2" fill="#e8ece7"/><rect x="43" y="342" width="161" height="12" rx="2" fill="#253940"/>
+          <rect x="117" y="211" width="137" height="13" rx="3" fill="#10252a" stroke="#709095"/><text x="185" y="220" fill="#8ca8a8" font-size="8" text-anchor="middle">M.2 PCIe 4.0</text>
+          <circle cx="306" cy="323" r="31" fill="#bfc9c7" stroke="#536368" stroke-width="4"/><circle cx="306" cy="323" r="25" fill="#9eaaac"/><text x="306" y="328" fill="#4a5558" font-size="11" text-anchor="middle">CR2032</text>
+          <rect x="344" y="279" width="74" height="67" rx="5" fill="#15262c" stroke="#819195" stroke-width="2"/><path d="M354 290h54v45h-54z" fill="#263d43"/><text x="381" y="318" fill="#91adaa" font-size="10" text-anchor="middle">B650</text>
+          <g fill="#141d20" stroke="#8c9a9d"><rect x="422" y="244" width="22" height="17"/><rect x="422" y="267" width="22" height="17"/><rect x="422" y="290" width="22" height="17"/><rect x="422" y="313" width="22" height="17"/></g>
+          <g fill="#aab8ba"><circle cx="111" cy="196" r="8"/><circle cx="132" cy="196" r="8"/><circle cx="288" cy="230" r="7"/><circle cx="401" cy="234" r="7"/></g>
+          <text x="27" y="390" fill="#7fb7af" font-size="11" font-family="monospace">SIMULAB B650M · ATX</text>
         </svg>`,
       power: `
         <span class="psu-unit">
@@ -714,15 +747,55 @@
 
     await wait(1050);
     if (token !== state.sequenceToken) return;
-    setMonitor(
-      "windows-desktop",
-      windowsDesktopScreen(`${part.name} reconhecido; POST concluído sem erros`),
-      "SISTEMA ESTÁVEL",
-    );
-    addLog("POST e teste funcional concluídos sem erros.", "success", "OK");
-    await wait(650);
+    renderHardwareVerification(activeCase, part);
+    addLog("Teste funcional do componente concluído sem erros.", "success", "OK");
+    await wait(950);
     if (token !== state.sequenceToken) return;
     completeCase();
+  }
+
+  function renderHardwareVerification(activeCase, part) {
+    const verifications = {
+      "storage-failure": () => setMonitor(
+        "bios",
+        noBootDeviceScreen("SIMULAB SSD 480 GB · S.M.A.R.T. OK", "A unidade nova está saudável e vazia. Instale um sistema operacional para iniciar."),
+        "SSD NOVO · SEM SISTEMA",
+      ),
+      "memory-failure": () => setMonitor(
+        "bios",
+        postScreen("Treinamento de memória concluído", ["DDR4 Channel A2: 8192 MB", "DDR4 Channel B2: 8192 MB", "Total Memory: 16384 MB", "POST Code: A0 — Ready"]),
+        "POST · MEMÓRIA OK",
+      ),
+      "power-failure": () => setMonitor(
+        "bios",
+        postScreen("Energia ATX estabilizada", ["+12 V: 12.08 V", "+5 V: 5.04 V", "+3.3 V: 3.31 V", "Power Good: asserted", "POST Code: A0 — Ready"]),
+        "POST · TENSÕES OK",
+      ),
+      "cooler-failure": () => setMonitor(
+        "bios",
+        uefiScreen({
+          tab: "MONITOR",
+          title: "Hardware Monitor",
+          rows: [["CPU Temperature", "38 °C", "ok"], ["CPU Fan Speed", "1480 RPM", "ok"], ["CPU Core Voltage", "1.176 V"], ["Thermal Protection", "Enabled"]],
+          footer: "F10  Save & Exit    CPU_FAN  Normal",
+        }),
+        "UEFI · TEMPERATURA NORMAL",
+      ),
+      "gpu-failure": () => setMonitor(
+        "bios",
+        postScreen("Adaptador gráfico inicializado", ["PCIe x16: Graphics Adapter", "Link Width: x16", "VRAM Test: PASS", "Video output: 1920 × 1080", "POST Code: A0 — Ready"]),
+        "POST · VÍDEO LIMPO",
+      ),
+      "network-hardware-failure": () => setMonitor(
+        "desktop",
+        networkStatusScreen(true, "hardware"),
+        "WINDOWS · ETHERNET CONECTADA",
+      ),
+    };
+
+    const render = verifications[activeCase.id];
+    if (render) render();
+    else setMonitor("bios", postScreen(`${part.name} reconhecido`, ["POST concluído sem erros", "Sistema pronto para inicializar"]), "POST · OK");
   }
 
   function renderSoftwareActions() {
@@ -772,13 +845,8 @@
     addLog(`Procedimento iniciado: ${action.name}.`, "info", "AÇÃO");
 
     if (actionId !== activeCase.correctAction) {
-      setMonitor(
-        "error",
-        screenWindow("Procedimento interrompido", "A ação executada não corresponde ao problema encontrado", 100, ["Nenhuma correção aplicável foi realizada.", "Revise os sintomas e os testes de diagnóstico."]),
-        "NÃO RESOLVIDO",
-      );
       registerWrongAction(`${action.name} não resolveu esta ocorrência.`);
-      await wait(1300);
+      await wait(500);
       if (token !== state.sequenceToken) return;
       state.busy = false;
       showBootOutcome(activeCase, token);
@@ -963,23 +1031,143 @@
     return `<div class="windows-desktop"><div class="desktop-wallpaper"><span class="wallpaper-orb wallpaper-orb--one"></span><span class="wallpaper-orb wallpaper-orb--two"></span></div><div class="desktop-icons"><span><i>🗑</i>Lixeira</span><span><i>📁</i>Explorador</span></div>${notification ? `<div class="desktop-notification"><b>Configuração concluída</b><span>${escapeHtml(notification)}</span></div>` : ""}<div class="windows-taskbar"><span class="taskbar-weather">☀ 22 °C</span><span class="taskbar-center">${windowsLogo()}<i>⌕</i><i>▣</i><i>◉</i></span><span class="taskbar-clock">10:42<br>17/09/2026</span></div></div>`;
   }
 
-  function renderSimulationStep(actionId, step, stepIndex) {
-    if (step.mode === "success") {
-      setMonitor("windows-desktop", windowsDesktopScreen(step.detail), "SISTEMA ATIVO");
-      return;
-    }
+  function windowsBootScreen(message) {
+    return `<div class="windows-boot">${windowsLogo()}<div class="boot-spinner"><i></i><i></i><i></i><i></i><i></i></div><p>${escapeHtml(message)}</p></div>`;
+  }
 
+  function uefiScreen({ tab = "MAIN", title = "UEFI BIOS Utility", warning = "", rows = [], footer = "F1  Help    F10  Save & Exit" } = {}) {
+    const tabs = ["MAIN", "ADVANCED", "MONITOR", "BOOT", "EXIT"];
+    const renderedTabs = tabs.map((item) => `<span class="${item === tab ? "is-active" : ""}">${item}</span>`).join("");
+    const renderedRows = rows.map(([label, value, status = ""]) => `<div class="uefi-row"><span>${escapeHtml(label)}</span><b class="${status ? `is-${status}` : ""}">${escapeHtml(value)}</b></div>`).join("");
+    return `<div class="uefi-screen"><header><strong>SIMULAB UEFI BIOS UTILITY</strong><small>Version 2.24.0917</small></header><nav>${renderedTabs}</nav><main><section><p class="uefi-section-label">${escapeHtml(tab)} / STATUS</p><h3>${escapeHtml(title)}</h3>${warning ? `<div class="uefi-warning"><i>!</i><span>${escapeHtml(warning)}</span></div>` : ""}<div class="uefi-rows">${renderedRows}</div></section><aside><span>System Information</span><b>B650M Training Board</b><span>UEFI Mode</span><b>Enabled</b><span>System Date</span><b>17/09/2026</b></aside></main><footer>${escapeHtml(footer)}</footer></div>`;
+  }
+
+  function postScreen(title, lines = []) {
+    const renderedLines = lines.map((line, index) => `<li><span>${index === lines.length - 1 ? "▶" : "✓"}</span>${escapeHtml(line)}</li>`).join("");
+    return `<div class="post-screen"><header><b>SIMULAB</b><span>UEFI POST DIAGNOSTICS</span><small>BIOS 2.24</small></header><main><h3>${escapeHtml(title)}</h3><ul>${renderedLines}</ul><div class="post-code"><span>POST STATUS</span><b>A0</b></div></main><footer>Press DEL to enter Setup · F11 for Boot Menu</footer></div>`;
+  }
+
+  function noSignalScreen(title, detail) {
+    return `<div class="no-signal-screen"><div class="no-signal-box"><i></i><strong>SEM SINAL</strong><span>HDMI 1</span></div><div class="beep-diagnostic"><b>${escapeHtml(title)}</b><span>${escapeHtml(detail)}</span></div></div>`;
+  }
+
+  function protectionScreen(title, detail) {
+    return `<div class="protection-screen"><span class="protection-icon">!</span><h3>${escapeHtml(title)}</h3><p>${escapeHtml(detail)}</p><small>CPU_PROCHOT# · SYSTEM HALTED</small></div>`;
+  }
+
+  function videoFailureScreen() {
+    return `<div class="video-failure"><div class="video-failure__noise"></div><div class="video-failure__dialog"><strong>VIDEO_TDR_FAILURE</strong><span>O adaptador gráfico parou de responder.</span><small>nvlddmkm.sys · Stop code 0x116</small></div></div>`;
+  }
+
+  function networkStatusScreen(connected, source = "hardware") {
+    const stateLabel = connected ? "Você está conectado à Internet" : source === "hardware" ? "Nenhum adaptador Ethernet encontrado" : "Sem conexão";
+    const adapter = connected ? "Realtek PCIe GbE Family Controller" : "Adaptador não detectado no barramento PCIe";
+    return `<div class="win-settings"><header><span>‹</span><b>Configurações</b><small>Rede e Internet</small></header><div class="win-settings__body"><aside><strong>Rede e Internet</strong><span class="is-active">Status</span><span>Ethernet</span><span>Discagem</span><span>Proxy</span></aside><main><div class="network-map ${connected ? "is-connected" : "is-disconnected"}"><i class="network-pc">▣</i><span></span><i class="network-globe">◎</i></div><h3>${escapeHtml(stateLabel)}</h3><p>${escapeHtml(adapter)}</p><div class="network-properties"><span>Estado do link</span><b>${connected ? "1,0 Gbit/s" : "Desconectado"}</b><span>Endereço IPv4</span><b>${connected ? "192.168.10.48" : "—"}</b><span>LED da porta</span><b class="${connected ? "is-ok" : "is-error"}">${connected ? "Aceso" : "Apagado"}</b></div></main></div></div>`;
+  }
+
+  function noBootDeviceScreen(device, detail) {
+    return `<div class="firmware-message"><header>SIMULAB UEFI</header><main><span class="firmware-drive">▱</span><h3>NO BOOTABLE DEVICE</h3><p>${escapeHtml(detail)}</p><dl><dt>Unidade detectada</dt><dd>${escapeHtml(device)}</dd><dt>Boot entry</dt><dd>Not found</dd></dl></main><footer>Insira uma mídia inicializável e pressione qualquer tecla.</footer></div>`;
+  }
+
+  function bootRecoveryScreen() {
+    return `<div class="recovery-screen"><div class="recovery-face">:(</div><h3>Recuperação</h3><p>O PC/dispositivo precisa ser reparado.</p><p>O arquivo de Dados de Configuração da Inicialização não contém informações válidas para um sistema operacional.</p><strong>Código do erro: 0xc0000098</strong><small>Pressione F1 para entrar no Ambiente de Recuperação.</small></div>`;
+  }
+
+  function deviceManagerScreen(stage = "missing", progress = 0) {
+    const ready = stage === "ready";
+    const busy = stage === "searching" || stage === "installing";
+    const status = ready
+      ? "Este dispositivo está funcionando corretamente."
+      : stage === "missing"
+        ? "Os drivers deste dispositivo não estão instalados. (Código 28)"
+        : stage === "searching"
+          ? "Procurando drivers no pacote compatível..."
+          : "Instalando Realtek PCIe GbE Family Controller...";
+    const deviceName = ready ? "Realtek PCIe GbE Family Controller" : "Controlador Ethernet";
+    return `<div class="device-manager"><header><span>Gerenciador de Dispositivos</span><small>— □ ×</small></header><div class="device-toolbar">← →　▣　⌕　?</div><div class="device-layout"><aside><b>LAB-PC-01</b><span>⌄ Adaptadores de vídeo</span><span class="device-category">⌄ Adaptadores de rede</span><em class="${ready ? "is-ready" : "is-warning"}">${ready ? "▣" : "!"} ${escapeHtml(deviceName)}</em><span>› Controladores de armazenamento</span><span>› Dispositivos do sistema</span></aside><main><div class="device-icon ${ready ? "is-ready" : ""}">${ready ? "▣" : "!"}</div><h3>${escapeHtml(deviceName)}</h3><p>${escapeHtml(status)}</p><dl><dt>Fabricante</dt><dd>${ready ? "Realtek" : "Desconhecido"}</dd><dt>Local</dt><dd>Barramento PCI 3, dispositivo 0</dd><dt>ID do Hardware</dt><dd>PCI\\VEN_10EC&amp;DEV_8168</dd></dl>${busy ? `<div class="device-progress"><span style="width:${Math.max(8, progress)}%"></span></div>` : ""}${ready ? '<div class="device-success">✓ Driver 10.73.815.2026 · dispositivo iniciado</div>' : ""}</main></div></div>`;
+  }
+
+  function taskManagerScreen() {
+    return `<div class="task-manager"><header><b>Gerenciador de Tarefas</b><small>— □ ×</small></header><nav><span class="is-active">Processos</span><span>Desempenho</span><span>Inicializar</span><span>Detalhes</span></nav><div class="task-summary"><b>96%<small>CPU</small></b><b>43%<small>Memória</small></b><b>12%<small>Disco</small></b><b>38%<small>Rede</small></b></div><div class="task-table"><div class="task-head"><span>Nome</span><span>CPU</span><span>Memória</span><span>Rede</span></div><div class="task-row is-danger"><span><i>!</i> update_service.exe</span><b>89,4%</b><span>684 MB</span><span>38 Mbps</span></div><div class="task-row"><span>Explorador do Windows</span><span>1,2%</span><span>118 MB</span><span>0 Mbps</span></div><div class="task-row"><span>Antimalware Service</span><span>0,8%</span><span>206 MB</span><span>0 Mbps</span></div></div><footer>Processos: 87　 Threads: 1.842　 CPU: 96%</footer></div>`;
+  }
+
+  function securityScanScreen(progress, stageIndex, complete) {
+    const threat = stageIndex >= 1 && !complete;
+    return `<div class="security-center"><header><span>🛡</span><b>Segurança do Windows</b><small>Proteção contra vírus e ameaças</small></header><main><div class="security-status ${complete ? "is-safe" : threat ? "is-threat" : "is-scanning"}"><i>${complete ? "✓" : threat ? "!" : "⌕"}</i><div><h3>${complete ? "Nenhuma ameaça atual" : threat ? "Ameaça encontrada" : "Verificação em andamento"}</h3><p>${complete ? "Trojan:Win32/FakeUpdate removido e colocado em quarentena." : threat ? "Trojan:Win32/FakeUpdate · Gravidade alta" : "Analisando processos, arquivos e itens de inicialização."}</p></div></div><div class="security-progress"><span style="width:${progress}%"></span></div><div class="security-stats"><span>Progresso<b>${progress}%</b></span><span>Arquivos verificados<b>${complete ? "96.384" : stageIndex > 0 ? "48.912" : "1.240"}</b></span><span>Ameaças<b>${complete ? "0 ativas" : threat ? "1" : "0"}</b></span></div><section><b>Ações executadas</b><span>${complete ? "Processo encerrado · persistência removida · proteção em tempo real ativa" : threat ? "Interrompendo update_service.exe e removendo a inicialização automática" : "Verificação completa selecionada"}</span></section></main></div>`;
+  }
+
+  function dnsBrowserScreen(resolved) {
+    return `<div class="browser-screen"><header><span class="browser-tab">Simula Escola ${resolved ? "" : "— erro"}</span><div class="browser-controls">←　→　↻</div><div class="browser-address"><i>${resolved ? "🔒" : "ⓘ"}</i>${resolved ? "https://escola.rs.gov.br" : "escola.rs.gov.br"}</div></header><main class="${resolved ? "is-loaded" : "is-error"}">${resolved ? '<div class="loaded-site"><span>SIMULA EDUCAÇÃO</span><h3>Conexão restaurada</h3><p>O nome foi resolvido pelo servidor DNS e a página respondeu normalmente.</p><b>HTTP 200 · 0% de perda</b></div>' : '<div class="browser-error-icon">!</div><h3>Não é possível acessar este site</h3><p>Não foi possível encontrar o endereço DNS de <b>escola.rs.gov.br</b>.</p><strong>DNS_PROBE_FINISHED_NXDOMAIN</strong><small>O ping para 1.1.1.1 continua respondendo.</small>'}</main></div>`;
+  }
+
+  function dnsRepairScreen(stepIndex, progress, lines = []) {
+    const renderedLines = lines.map((line) => `<span>${escapeHtml(line)}</span>`).join("");
+    const captions = ["Configuração IPv4 — DNS automático", "Prompt de Comando — cache DNS", "Prompt de Comando — teste de resolução"];
+    return `<div class="dns-repair"><header>${escapeHtml(captions[stepIndex] || captions[2])}<small>Administrador: Windows Terminal</small></header><main><div class="terminal-command"><span>Microsoft Windows [versão 10.0.26100]</span><span>(c) Microsoft Corporation. Todos os direitos reservados.</span><br>${renderedLines}<i class="terminal-cursor"></i></div><div class="dns-route"><span class="is-ok">PC</span><i></i><span class="is-ok">192.168.10.1</span><i class="${stepIndex > 1 ? "is-ok" : ""}"></i><span class="${stepIndex > 1 ? "is-ok" : ""}">DNS</span></div><div class="dns-progress"><span style="width:${progress}%"></span></div></main></div>`;
+  }
+
+  function bootPriorityScreen(order, state = "editing") {
+    const rendered = order.map((item, index) => `<li class="${index === 0 ? "is-first" : ""}"><b>${index + 1}</b><span>${escapeHtml(item)}</span><small>${item.includes("Windows") ? "NVMe/SATA" : item.includes("USB") ? "UEFI USB" : "IPv4"}</small></li>`).join("");
+    const notice = state === "usb-error"
+      ? '<div class="boot-alert"><b>MISSING OPERATING SYSTEM</b><span>A primeira opção aponta para um pendrive de dados sem boot.</span></div>'
+      : state === "saving"
+        ? '<div class="boot-save"><span class="boot-spinner-small"></span><b>Save configuration and reset</b></div>'
+        : '<div class="boot-help">Use ↑ ↓ para selecionar e + − para alterar a prioridade.</div>';
+    return `<div class="boot-priority"><header><b>SIMULAB UEFI BIOS UTILITY</b><nav>MAIN　 ADVANCED　 <strong>BOOT</strong>　 EXIT</nav></header><main><section><p>Boot Option Priorities</p><ol>${rendered}</ol>${notice}</section><aside><b>Boot Configuration</b><span>Fast Boot</span><em>Enabled</em><span>CSM</span><em>Disabled</em><span>Secure Boot</span><em>Enabled</em></aside></main><footer>Enter Select　 +/- Change Option　 F10 Save & Exit　 ESC Back</footer></div>`;
+  }
+
+  function renderSimulationStep(actionId, step, stepIndex) {
     if (actionId === "repair-boot") {
+      if (step.mode === "success") {
+        setMonitor("windows-setup", windowsBootScreen("Inicialização restaurada — carregando o Windows"), "WINDOWS BOOT MANAGER · OK");
+        return;
+      }
       const lines = step.lines.map((line) => `<span>${escapeHtml(line)}</span>`).join("");
       setMonitor("winre", `<div class="winre-screen"><header>Ambiente de Recuperação do Windows</header><main><div class="winre-title"><i>›_</i><span><b>${escapeHtml(step.title)}</b><small>${escapeHtml(step.detail)}</small></span></div><div class="winre-terminal">${lines}<i class="terminal-cursor"></i></div><div class="winre-progress"><span style="width:${step.progress}%"></span></div></main></div>`, `${step.progress}%`);
       return;
     }
 
-    const mode = step.mode === "success" ? "desktop" : step.mode;
+    if (actionId === "install-driver") {
+      const stage = step.mode === "success" ? "ready" : stepIndex === 0 ? "missing" : stepIndex === 1 ? "searching" : "installing";
+      setMonitor("device", deviceManagerScreen(stage, step.progress), step.mode === "success" ? "ETHERNET · 1,0 GBIT/S" : `DRIVER · ${step.progress}%`);
+      return;
+    }
+
+    if (actionId === "remove-malware") {
+      setMonitor("security", securityScanScreen(step.progress, stepIndex, step.mode === "success"), step.mode === "success" ? "SEGURANÇA · LIMPO" : `VERIFICAÇÃO · ${step.progress}%`);
+      return;
+    }
+
+    if (actionId === "configure-dns") {
+      if (step.mode === "success") {
+        setMonitor("desktop", dnsBrowserScreen(true), "NAVEGADOR · CONECTADO");
+      } else {
+        setMonitor("terminal", dnsRepairScreen(stepIndex, step.progress, step.lines), `DNS · ${step.progress}%`);
+      }
+      return;
+    }
+
+    if (actionId === "configure-boot") {
+      if (step.mode === "success") {
+        setMonitor("windows-setup", windowsBootScreen("Windows Boot Manager selecionado corretamente"), "BOOT · WINDOWS");
+      } else {
+        const order = stepIndex === 0
+          ? ["USB Mass Storage", "Windows Boot Manager", "Network PXE"]
+          : ["Windows Boot Manager", "USB Mass Storage", "Network PXE"];
+        setMonitor("bios", bootPriorityScreen(order, stepIndex === 2 ? "saving" : "editing"), stepIndex === 2 ? "UEFI · SALVANDO" : "UEFI · BOOT");
+      }
+      return;
+    }
+
+    if (step.mode === "success") {
+      setMonitor("bios", postScreen(step.title, [step.detail, ...step.lines]), "PROCEDIMENTO CONCLUÍDO");
+      return;
+    }
+
     setMonitor(
-      mode,
+      step.mode,
       screenWindow(step.title, step.detail, step.progress, step.lines),
-      step.mode === "success" ? "CONCLUÍDO" : `${step.progress}%`,
+      `${step.progress}%`,
     );
   }
 
