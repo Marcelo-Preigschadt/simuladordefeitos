@@ -14,9 +14,9 @@
       type="image/svg+xml"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%2305080c'/%3E%3Cpath d='M16 17h32v23H16zM24 47h16M32 40v7' fill='none' stroke='%2329e6b1' stroke-width='5' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='43' cy='35' r='2.5' fill='%23ffb454'/%3E%3C/svg%3E"
     />
-    <link rel="stylesheet" href="./styles.css?v=20260917-7" />
-    <script src="./data.js?v=20260917-7" defer></script>
-    <script src="./app.js?v=20260917-7" defer></script>
+    <link rel="stylesheet" href="./styles.css?v=20260918-8" />
+    <script src="./data.js?v=20260918-8" defer></script>
+    <script src="./app.js?v=20260918-8" defer></script>
   </head>
   <body>
     <div class="ambient-grid" aria-hidden="true"></div>
@@ -138,6 +138,38 @@
             <div class="severity-badge" id="severityBadge">NÍVEL 1</div>
           </article>
 
+          <div class="top-controls" aria-label="Controles da bancada">
+            <section class="console-card power-card">
+              <div class="section-heading section-heading--small">
+                <div>
+                  <p class="eyebrow">Controle principal</p>
+                  <h2>Energia do computador</h2>
+                </div>
+                <span class="state-pill is-off" id="powerState">OFF</span>
+              </div>
+              <button class="power-button" id="powerButton" type="button" aria-pressed="false">
+                <span class="power-button__icon" aria-hidden="true">⏻</span>
+                <span>
+                  <strong class="power-button__label">Ligar computador</strong>
+                  <small id="powerButtonDetail">Pressione para testar a inicialização</small>
+                </span>
+              </button>
+              <p class="power-hint" id="powerHint">A estação está desenergizada.</p>
+            </section>
+
+            <section class="console-card progress-card">
+              <div class="section-heading section-heading--small">
+                <div>
+                  <p class="eyebrow">Desempenho</p>
+                  <h2>Pontuação do caso</h2>
+                </div>
+                <strong class="case-points" id="casePoints">100</strong>
+              </div>
+              <div class="score-track"><span id="scoreTrackFill"></span></div>
+              <p>Testes custam 3 pontos. Uma intervenção incorreta custa 20 pontos.</p>
+            </section>
+          </div>
+
           <section class="lab-workspace" id="labWorkspace" aria-label="Bancada virtual de manutenção">
             <div class="monitor-unit">
               <div class="monitor-label">
@@ -234,6 +266,62 @@
             </div>
           </section>
 
+          <section class="console-card action-card">
+            <div class="section-heading section-heading--small">
+              <div>
+                <p class="eyebrow" id="actionEyebrow">Intervenção física</p>
+                <h2 id="actionHeading">Bancada de reparo</h2>
+              </div>
+              <span class="attempts-badge" id="attemptsBadge">0 erros</span>
+            </div>
+
+            <p class="action-help" id="actionHelp">
+              Selecione uma peça ou ferramenta e aplique diretamente no componente do gabinete.
+            </p>
+
+            <div class="hardware-interventions" id="hardwareInterventions">
+              <section class="intervention-group" aria-labelledby="partsShelfTitle">
+                <div class="intervention-group__heading">
+                  <h3 id="partsShelfTitle">Peças de reposição</h3>
+                  <span>SUBSTITUIÇÃO</span>
+                </div>
+                <div class="parts-tray" id="partsTray"></div>
+              </section>
+
+              <section class="intervention-group intervention-group--maintenance" aria-labelledby="maintenanceShelfTitle">
+                <div class="intervention-group__heading">
+                  <h3 id="maintenanceShelfTitle">Limpeza e reencaixe</h3>
+                  <span>SEM TROCA</span>
+                </div>
+                <div class="maintenance-tray" id="maintenanceTray"></div>
+              </section>
+            </div>
+
+            <div class="software-actions" id="softwareActions" hidden></div>
+
+            <div class="selected-part" id="selectedPart" hidden>
+              <div class="selected-part__visual" id="selectedPartVisual" aria-hidden="true"></div>
+              <div>
+                <span id="selectedItemCaption">Intervenção selecionada</span>
+                <strong id="selectedPartName">—</strong>
+              </div>
+              <button id="cancelPartButton" type="button">Cancelar</button>
+            </div>
+          </section>
+
+          <section class="result-panel" id="resultDialog" hidden aria-live="polite">
+            <div class="result-shell">
+              <div class="result-mark" id="resultMark" aria-hidden="true">✓</div>
+              <div class="result-copy">
+                <p class="eyebrow" id="resultEyebrow">Reparo concluído</p>
+                <h2 id="resultTitle">Falha resolvida</h2>
+                <p id="resultMessage"></p>
+              </div>
+              <div class="result-details" id="resultDetails"></div>
+              <button class="primary-button" id="nextCaseButton" type="button">Próximo caso</button>
+            </div>
+          </section>
+
           <section class="tool-rack" aria-labelledby="toolsTitle">
             <div class="section-heading">
               <div>
@@ -258,77 +346,8 @@
             <div class="terminal-log" id="terminalLog" role="log" aria-live="polite"></div>
           </section>
         </section>
-
-        <aside class="control-console" aria-label="Console de manutenção">
-          <section class="console-card power-card">
-            <div class="section-heading section-heading--small">
-              <div>
-                <p class="eyebrow">Controle principal</p>
-                <h2>Energia do computador</h2>
-              </div>
-              <span class="state-pill is-off" id="powerState">OFF</span>
-            </div>
-            <button class="power-button" id="powerButton" type="button" aria-pressed="false">
-              <span class="power-button__icon" aria-hidden="true">⏻</span>
-              <span>
-                <strong class="power-button__label">Ligar computador</strong>
-                <small id="powerButtonDetail">Pressione para testar a inicialização</small>
-              </span>
-            </button>
-            <p class="power-hint" id="powerHint">A estação está desenergizada.</p>
-          </section>
-
-          <section class="console-card action-card">
-            <div class="section-heading section-heading--small">
-              <div>
-                <p class="eyebrow" id="actionEyebrow">Intervenção física</p>
-                <h2 id="actionHeading">Peças de reposição</h2>
-              </div>
-              <span class="attempts-badge" id="attemptsBadge">0 erros</span>
-            </div>
-
-            <p class="action-help" id="actionHelp">
-              Arraste a peça para o local correspondente dentro do gabinete.
-            </p>
-
-            <div class="parts-tray" id="partsTray"></div>
-            <div class="software-actions" id="softwareActions" hidden></div>
-
-            <div class="selected-part" id="selectedPart" hidden>
-              <div class="selected-part__visual" id="selectedPartVisual" aria-hidden="true"></div>
-              <div>
-                <span>Peça selecionada</span>
-                <strong id="selectedPartName">—</strong>
-              </div>
-              <button id="cancelPartButton" type="button">Cancelar</button>
-            </div>
-          </section>
-
-          <section class="console-card progress-card">
-            <div class="section-heading section-heading--small">
-              <div>
-                <p class="eyebrow">Desempenho</p>
-                <h2>Pontuação do caso</h2>
-              </div>
-              <strong class="case-points" id="casePoints">100</strong>
-            </div>
-            <div class="score-track"><span id="scoreTrackFill"></span></div>
-            <p>Testes custam 3 pontos. Uma intervenção incorreta custa 20 pontos.</p>
-          </section>
-        </aside>
       </div>
     </main>
-
-    <dialog class="result-dialog" id="resultDialog">
-      <div class="result-shell">
-        <div class="result-mark" id="resultMark" aria-hidden="true">✓</div>
-        <p class="eyebrow" id="resultEyebrow">Reparo concluído</p>
-        <h2 id="resultTitle">Falha resolvida</h2>
-        <p id="resultMessage"></p>
-        <div class="result-details" id="resultDetails"></div>
-        <button class="primary-button" id="nextCaseButton" type="button">Próximo caso</button>
-      </div>
-    </dialog>
 
     <div class="toast-region" id="toastRegion" aria-live="polite" aria-atomic="true"></div>
   </body>
