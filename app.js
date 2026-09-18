@@ -3,6 +3,7 @@
 
   const {
     hardwareParts,
+    maintenanceTools,
     diagnosticTools,
     softwareActions,
     simulations,
@@ -28,8 +29,10 @@
     errors: 0,
     usedTools: new Set(),
     selectedPart: null,
+    selectedMaintenance: null,
     draggedPart: null,
     replacedPart: null,
+    maintainedPart: null,
     busy: false,
     caseResolved: false,
     finished: false,
@@ -98,10 +101,13 @@
       "actionHeading",
       "attemptsBadge",
       "actionHelp",
+      "hardwareInterventions",
       "partsTray",
+      "maintenanceTray",
       "softwareActions",
       "selectedPart",
       "selectedPartVisual",
+      "selectedItemCaption",
       "selectedPartName",
       "cancelPartButton",
       "casePoints",
@@ -131,7 +137,6 @@
     });
     dom.cancelPartButton.addEventListener("click", clearSelectedPart);
     dom.nextCaseButton.addEventListener("click", advanceCase);
-    dom.resultDialog.addEventListener("cancel", (event) => event.preventDefault());
   }
 
   function initialize() {
@@ -140,6 +145,7 @@
     renderTools();
     renderCabinet();
     renderPartsTray();
+    renderMaintenanceTray();
     renderSoftwareActions();
     updateScore();
   }
@@ -207,8 +213,10 @@
     state.errors = 0;
     state.usedTools.clear();
     state.selectedPart = null;
+    state.selectedMaintenance = null;
     state.draggedPart = null;
     state.replacedPart = null;
+    state.maintainedPart = null;
     state.busy = false;
     state.caseResolved = false;
 
@@ -222,10 +230,12 @@
     dom.severityBadge.textContent = `NÍVEL ${activeCase.level}`;
     dom.sessionCase.textContent = `${caseNumber}/${String(TOTAL_CASES).padStart(2, "0")}`;
     dom.terminalLog.replaceChildren();
+    dom.resultDialog.hidden = true;
 
     configureCaseMode(activeCase);
     renderCabinet();
     renderPartsTray();
+    renderMaintenanceTray();
     renderSoftwareActions();
     renderTools();
     renderPowerState();
@@ -249,16 +259,16 @@
     dom.labWorkspace.classList.toggle("is-software-mode", !isHardware);
     dom.hardwareView.hidden = !isHardware;
     dom.softwareView.hidden = isHardware;
-    dom.partsTray.hidden = !isHardware;
+    dom.hardwareInterventions.hidden = !isHardware;
     dom.softwareActions.hidden = isHardware;
     dom.selectedPart.hidden = true;
 
     dom.actionEyebrow.textContent = isHardware ? "Intervenção física" : "Intervenção no sistema";
-    dom.actionHeading.textContent = isHardware ? "Peças de reposição" : "Procedimentos disponíveis";
+    dom.actionHeading.textContent = isHardware ? "Peças e manutenção" : "Procedimentos disponíveis";
     dom.actionHelp.textContent = isHardware
-      ? "Arraste a peça até o mesmo componente no gabinete. No celular, toque na peça e depois no encaixe."
+      ? "Escolha uma peça, uma limpeza ou um reencaixe e aplique diretamente no componente do gabinete."
       : "Escolha o procedimento e acompanhe a execução diretamente no monitor.";
-    dom.cabinetHelp.textContent = "Arraste uma peça para o encaixe correspondente ou use dois toques.";
+    dom.cabinetHelp.textContent = "Selecione uma intervenção abaixo e depois clique no componente correspondente.";
 
     updateSystemFacts(activeCase);
   }
@@ -357,6 +367,10 @@
         setMonitor("error", noSignalScreen("POST interrompido", "LED DRAM aceso · 3 bipes longos"), "SEM SINAL");
         addLog("Três bipes longos repetidos; POST interrompido no teste de memória.", "error", "POST");
       },
+      "memory-contact": () => {
+        setMonitor("error", noSignalScreen("Falha DRAM intermitente", "3 bipes · o comportamento muda ao movimentar os módulos"), "SEM SINAL · INTERMITENTE");
+        addLog("POST alterna entre falha DRAM e inicialização normal; indício de mau contato.", "warning", "POST");
+      },
       overheat: () => {
         setMonitor(
           "bios",
@@ -394,6 +408,28 @@
           "GPU · SINAL CORROMPIDO",
         );
         addLog("Artefatos e reinicialização do driver gráfico detectados.", "error", "GPU");
+      },
+      "gpu-contact": () => {
+        setMonitor(
+          "artifacts",
+          '<div class="video-failure"><div class="video-failure__noise"></div><div class="video-failure__dialog"><strong>PCIe LINK UNSTABLE</strong><span>O adaptador gráfico desapareceu e foi enumerado novamente.</span><small>Bus 01 · Device 00 · Link retraining failed</small></div></div>',
+          "GPU · CONTATO INTERMITENTE",
+        );
+        addLog("A enumeração PCIe da GPU muda quando a placa é movimentada.", "warning", "GPU");
+      },
+      "storage-intermittent": () => {
+        setMonitor(
+          "bios",
+          uefiScreen({
+            tab: "MAIN",
+            title: "SATA DEVICE NOT PRESENT",
+            warning: "A unidade configurada no SATA Port 1 não respondeu durante a enumeração.",
+            rows: [["SATA Port 1", "Not Present", "danger"], ["SATA Link", "Down", "danger"], ["Windows Boot Manager", "Not Found", "danger"], ["Previous detection", "SIMULAB SSD 480 GB"]],
+            footer: "F1  Setup    F8  Boot Menu",
+          }),
+          "UEFI · SSD NÃO DETECTADO",
+        );
+        addLog("SATA Port 1 alterna entre unidade detectada e Not Present.", "warning", "SATA");
       },
       "network-card-failure": () => {
         setMonitor(
@@ -490,7 +526,7 @@
     if (!dom.openCabinet) return;
     const activeCase = getActiveCase();
     const faultPart = activeCase?.kind === "hardware" ? activeCase.correctPart : "";
-    const faultResolved = state.replacedPart === faultPart;
+    const faultResolved = state.replacedPart === faultPart || state.maintainedPart === faultPart;
 
     dom.openCabinet.classList.toggle("is-powered", state.computerOn);
     dom.openCabinet.classList.toggle("is-fault-active", Boolean(state.computerOn && faultPart && !faultResolved));
@@ -499,7 +535,7 @@
 
     dom.cabinetSlots.querySelectorAll(".cabinet-slot").forEach((slot) => {
       slot.classList.toggle("is-faulty", state.computerOn && !faultResolved && slot.dataset.partId === faultPart);
-      slot.classList.toggle("is-repaired", state.replacedPart === slot.dataset.partId);
+      slot.classList.toggle("is-repaired", state.replacedPart === slot.dataset.partId || state.maintainedPart === slot.dataset.partId);
     });
   }
 
@@ -530,8 +566,12 @@
       slot.append(visual, tooltip);
 
       slot.addEventListener("click", () => {
+        if (state.selectedMaintenance) {
+          attemptMaintenanceAction(state.selectedMaintenance, part.id);
+          return;
+        }
         if (!state.selectedPart) {
-          showToast("Primeiro selecione uma peça de reposição.", "warning");
+          showToast("Primeiro selecione uma peça ou ferramenta da bancada de reparo.", "warning");
           return;
         }
         attemptHardwareReplacement(state.selectedPart, part.id);
@@ -600,14 +640,49 @@
     refreshInteractiveState();
   }
 
+  function renderMaintenanceTray() {
+    dom.maintenanceTray.replaceChildren();
+
+    maintenanceTools.forEach((tool) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "maintenance-card";
+      button.dataset.maintenanceId = tool.id;
+      button.setAttribute("aria-label", `Selecionar ${tool.name}`);
+
+      const visual = document.createElement("span");
+      visual.className = "maintenance-card__visual";
+      visual.setAttribute("aria-hidden", "true");
+      visual.innerHTML = maintenanceVisualMarkup(tool.id);
+
+      const copy = document.createElement("span");
+      copy.className = "maintenance-card__copy";
+      const title = document.createElement("strong");
+      title.textContent = tool.name;
+      const description = document.createElement("span");
+      description.textContent = tool.description;
+      copy.append(title, description);
+
+      const code = document.createElement("small");
+      code.className = "maintenance-card__code";
+      code.textContent = tool.short;
+      button.append(visual, copy, code);
+      button.addEventListener("click", () => selectMaintenance(tool.id));
+      dom.maintenanceTray.append(button);
+    });
+    refreshInteractiveState();
+  }
+
   function selectPart(partId) {
     if (state.busy || state.caseResolved || getActiveCase()?.kind !== "hardware") return;
     const part = getHardwarePart(partId);
     if (!part) return;
 
     state.selectedPart = partId;
+    state.selectedMaintenance = null;
     dom.selectedPart.hidden = false;
     dom.selectedPartVisual.innerHTML = hardwareVisualMarkup(part.id, "selected");
+    dom.selectedItemCaption.textContent = "Peça selecionada";
     dom.selectedPartName.textContent = part.name;
     dom.cabinetHelp.textContent = `Agora coloque ${part.name} no encaixe destacado.`;
 
@@ -616,16 +691,53 @@
     });
     document.querySelectorAll(".cabinet-slot").forEach((slot) => {
       slot.classList.toggle("is-compatible", slot.dataset.partId === partId);
+      slot.classList.remove("is-maintenance-compatible");
+    });
+    document.querySelectorAll(".maintenance-card.is-selected").forEach((button) => button.classList.remove("is-selected"));
+  }
+
+  function selectMaintenance(toolId) {
+    if (state.busy || state.caseResolved || getActiveCase()?.kind !== "hardware") return;
+    const tool = getMaintenanceTool(toolId);
+    if (!tool) return;
+
+    state.selectedPart = null;
+    state.selectedMaintenance = toolId;
+    dom.selectedPart.hidden = false;
+    dom.selectedPartVisual.innerHTML = `<span class="maintenance-card__visual">${maintenanceVisualMarkup(tool.id)}</span>`;
+    dom.selectedItemCaption.textContent = "Procedimento selecionado";
+    dom.selectedPartName.textContent = tool.name;
+    dom.cabinetHelp.textContent = `Agora aplique ${tool.name} em um componente compatível destacado.`;
+
+    document.querySelectorAll(".part-card.is-selected").forEach((button) => button.classList.remove("is-selected"));
+    document.querySelectorAll(".maintenance-card").forEach((button) => {
+      button.classList.toggle("is-selected", button.dataset.maintenanceId === toolId);
+    });
+    document.querySelectorAll(".cabinet-slot").forEach((slot) => {
+      slot.classList.remove("is-compatible");
+      slot.classList.toggle("is-maintenance-compatible", tool.compatibleParts.includes(slot.dataset.partId));
     });
   }
 
   function clearSelectedPart() {
     state.selectedPart = null;
+    state.selectedMaintenance = null;
     dom.selectedPart.hidden = true;
     dom.selectedPartVisual.replaceChildren();
-    dom.cabinetHelp.textContent = "Arraste uma peça para o encaixe correspondente ou use dois toques.";
+    dom.cabinetHelp.textContent = "Selecione uma intervenção abaixo e depois clique no componente correspondente.";
     document.querySelectorAll(".part-card.is-selected").forEach((button) => button.classList.remove("is-selected"));
+    document.querySelectorAll(".maintenance-card.is-selected").forEach((button) => button.classList.remove("is-selected"));
     document.querySelectorAll(".cabinet-slot.is-compatible").forEach((slot) => slot.classList.remove("is-compatible"));
+    document.querySelectorAll(".cabinet-slot.is-maintenance-compatible").forEach((slot) => slot.classList.remove("is-maintenance-compatible"));
+  }
+
+  function maintenanceVisualMarkup(toolId) {
+    const visuals = {
+      "clean-eraser": '<span class="tool-eraser"><span class="eraser-body"></span><span class="contact-strip"></span></span>',
+      "clean-isopropyl": '<span class="tool-isopropyl"><span class="ipa-bottle"><b>IPA</b><small>99,8%</small></span><span class="clean-brush"></span></span>',
+      reseat: '<span class="tool-reseat"><span class="reseat-card"></span><span class="reseat-arrows">↕</span></span>',
+    };
+    return visuals[toolId] || "";
   }
 
   function hardwareVisualMarkup(partId, context = "installed") {
@@ -726,8 +838,11 @@
     if (token !== state.sequenceToken) return;
     slot?.classList.remove("is-installing");
 
-    if (partId !== activeCase.correctPart) {
-      registerWrongAction(`A troca de ${part.name} não resolveu a ocorrência.`);
+    if (partId !== activeCase.correctPart || activeCase.correctMaintenance) {
+      const message = activeCase.correctMaintenance && partId === activeCase.correctPart
+        ? `${part.name} está funcional; a substituição não era necessária. Faça a manutenção dos contatos.`
+        : `A troca de ${part.name} não resolveu a ocorrência.`;
+      registerWrongAction(message);
       clearSelectedPart();
       state.busy = false;
       refreshInteractiveState();
@@ -754,6 +869,85 @@
     completeCase();
   }
 
+  async function attemptMaintenanceAction(toolId, partId) {
+    const activeCase = getActiveCase();
+    if (!activeCase || activeCase.kind !== "hardware" || state.busy || state.caseResolved) return;
+
+    const tool = getMaintenanceTool(toolId);
+    const part = getHardwarePart(partId);
+    if (!tool || !part) return;
+
+    if (!tool.compatibleParts.includes(partId)) {
+      showToast(`${tool.name} não é o procedimento indicado para ${part.name}.`, "warning");
+      addLog(`Procedimento incompatível: ${tool.name} não foi aplicado em ${part.name}.`, "warning", "SAFE");
+      return;
+    }
+
+    if (state.computerOn) {
+      showToast("Desligue o computador antes de remover, limpar ou reencaixar componentes.", "error");
+      addLog("Manutenção bloqueada: há energia no gabinete.", "error", "SAFE");
+      return;
+    }
+
+    state.busy = true;
+    state.sequenceToken += 1;
+    const token = state.sequenceToken;
+    refreshInteractiveState();
+    const slot = dom.cabinetSlots.querySelector(`[data-part-id="${partId}"]`);
+    slot.dataset.operationLabel = tool.id === "reseat" ? "REMOVENDO E REENCAIXANDO" : "LIMPANDO CONTATOS";
+
+    addLog(`${tool.name} aplicado em ${part.name}.`, "info", "MANUT");
+    showToast(`${tool.name}: executando procedimento em ${part.name}...`, "info");
+
+    if (tool.id === "reseat") {
+      slot.classList.add("is-removing");
+      await wait(520);
+      if (token !== state.sequenceToken) return;
+      slot.classList.remove("is-removing");
+      slot.classList.add("is-installing");
+      await wait(620);
+      slot.classList.remove("is-installing");
+    } else {
+      slot.classList.add("is-cleaning");
+      await wait(1500);
+      slot.classList.remove("is-cleaning");
+    }
+
+    if (token !== state.sequenceToken) return;
+    delete slot.dataset.operationLabel;
+
+    const isCorrect = toolId === activeCase.correctMaintenance && partId === activeCase.correctPart;
+    if (!isCorrect) {
+      const message = partId !== activeCase.correctPart
+        ? `${tool.name} foi aplicado no componente errado e a falha permaneceu.`
+        : `${tool.name} não é o tratamento correto para este tipo de contato.`;
+      registerWrongAction(message);
+      clearSelectedPart();
+      state.busy = false;
+      refreshInteractiveState();
+      return;
+    }
+
+    clearSelectedPart();
+    state.maintainedPart = partId;
+    addLog(`${part.name} limpo/reencaixado sem substituição. Reconectando energia para validar.`, "success", "MANUT");
+    state.computerOn = true;
+    renderPowerState();
+    setMonitor(
+      "booting",
+      '<div class="screen-logo">SIMULAB UEFI</div><span class="screen-status-label">VALIDANDO CONTATO E ENUMERAÇÃO</span><div class="screen-progress"><span style="width:72%"></span></div>',
+      "TESTE APÓS MANUTENÇÃO",
+    );
+
+    await wait(1050);
+    if (token !== state.sequenceToken) return;
+    renderHardwareVerification(activeCase, part);
+    addLog("Contato estável e componente enumerado sem erros após a manutenção.", "success", "OK");
+    await wait(2200);
+    if (token !== state.sequenceToken) return;
+    completeCase();
+  }
+
   function renderHardwareVerification(activeCase, part) {
     const verifications = {
       "storage-failure": () => setMonitor(
@@ -765,6 +959,11 @@
         "bios",
         postScreen("Treinamento de memória concluído", ["DDR4 Channel A2: 8192 MB", "DDR4 Channel B2: 8192 MB", "Total Memory: 16384 MB", "POST Code: A0 — Ready"]),
         "POST · MEMÓRIA OK",
+      ),
+      "memory-contact-oxidation": () => setMonitor(
+        "bios",
+        postScreen("Contatos de memória estabilizados", ["DDR4 Channel A2: 8192 MB", "DDR4 Channel B2: 8192 MB", "Memory training: PASS", "DRAM Q-LED: OFF", "POST Code: A0 — Ready"]),
+        "POST · CONTATOS LIMPOS",
       ),
       "power-failure": () => setMonitor(
         "bios",
@@ -785,6 +984,16 @@
         "bios",
         postScreen("Adaptador gráfico inicializado", ["PCIe x16: Graphics Adapter", "Link Width: x16", "VRAM Test: PASS", "Video output: 1920 × 1080", "POST Code: A0 — Ready"]),
         "POST · VÍDEO LIMPO",
+      ),
+      "gpu-contact-contamination": () => setMonitor(
+        "bios",
+        postScreen("Link PCIe estabilizado", ["PCIe x16: Graphics Adapter", "Link Width: x16", "Link retraining: PASS", "Video signal: stable", "POST Code: A0 — Ready"]),
+        "POST · CONTATO PCIe OK",
+      ),
+      "storage-loose-connection": () => setMonitor(
+        "bios",
+        postScreen("Unidade SATA detectada", ["SATA Port 1: SIMULAB SSD 480 GB", "S.M.A.R.T. Status: OK", "Link speed: 6.0 Gb/s", "Windows Boot Manager: found", "POST Code: A0 — Ready"]),
+        "POST · SATA ESTÁVEL",
       ),
       "network-hardware-failure": () => setMonitor(
         "desktop",
@@ -1264,7 +1473,8 @@
       ["Erros", state.errors],
     ]);
     dom.nextCaseButton.textContent = state.caseIndex === TOTAL_CASES - 1 ? "Ver resultado final" : "Próximo caso";
-    dom.resultDialog.showModal();
+    dom.resultDialog.hidden = false;
+    showToast("Reparo validado. O resultado permanece visível no monitor.", "success");
   }
 
   function advanceCase() {
@@ -1273,7 +1483,7 @@
       return;
     }
 
-    dom.resultDialog.close();
+    dom.resultDialog.hidden = true;
     if (state.caseIndex < TOTAL_CASES - 1) {
       state.caseIndex += 1;
       loadCase();
@@ -1301,7 +1511,7 @@
       ["Tempo", formatTime(state.elapsed)],
     ]);
     dom.nextCaseButton.textContent = "Iniciar nova sessão";
-    dom.resultDialog.showModal();
+    dom.resultDialog.hidden = false;
   }
 
   function setResultStats(stats) {
@@ -1328,6 +1538,9 @@
     dom.partsTray.querySelectorAll("button").forEach((button) => {
       button.disabled = disabled;
       button.draggable = !disabled;
+    });
+    dom.maintenanceTray.querySelectorAll("button").forEach((button) => {
+      button.disabled = disabled;
     });
     dom.softwareActions.querySelectorAll("button").forEach((button) => {
       button.disabled = disabled;
@@ -1389,6 +1602,10 @@
 
   function getHardwarePart(partId) {
     return hardwareParts.find((part) => part.id === partId);
+  }
+
+  function getMaintenanceTool(toolId) {
+    return maintenanceTools.find((tool) => tool.id === toolId);
   }
 
   function formatTime(totalSeconds) {
