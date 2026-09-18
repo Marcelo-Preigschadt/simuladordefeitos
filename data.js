@@ -52,6 +52,30 @@ window.SIMULATOR_DATA = (() => {
     },
   ];
 
+  const maintenanceTools = [
+    {
+      id: "clean-eraser",
+      name: "Borracha branca",
+      short: "ERASER",
+      description: "Limpar suavemente os contatos metálicos e remover todo o resíduo.",
+      compatibleParts: ["memory", "gpu", "network"],
+    },
+    {
+      id: "clean-isopropyl",
+      name: "Álcool isopropílico",
+      short: "IPA",
+      description: "Limpar contatos e slot com álcool isopropílico e pincel antiestático.",
+      compatibleParts: ["memory", "gpu", "network"],
+    },
+    {
+      id: "reseat",
+      name: "Remover e reencaixar",
+      short: "RESEAT",
+      description: "Refazer o encaixe e conferir travas, cabos e alimentação do componente.",
+      compatibleParts: ["memory", "storage", "gpu", "network"],
+    },
+  ];
+
   const diagnosticTools = [
     { id: "visual", short: "VIS", name: "Inspeção visual", requiresPower: false },
     { id: "post", short: "POST", name: "Executar POST", requiresPower: true },
@@ -364,6 +388,24 @@ window.SIMULATOR_DATA = (() => {
       },
     },
     {
+      id: "memory-contact-oxidation",
+      kind: "hardware",
+      level: 2,
+      title: "Mau contato nos módulos de memória",
+      symptom: "Após ficar meses sem uso, o PC alterna entre três bipes, LED DRAM aceso e inicialização normal quando os módulos são movimentados.",
+      boot: "memory-contact",
+      correctPart: "memory",
+      correctMaintenance: "clean-eraser",
+      explanation: "Os módulos estavam funcionais, mas havia oxidação superficial nos contatos. A limpeza suave com borracha branca, a remoção completa dos resíduos e o reencaixe restauraram o treinamento da memória sem substituir a peça.",
+      diagnostics: {
+        visual: "Há escurecimento e película irregular nos contatos dourados dos módulos; travas e slots estão íntegros.",
+        post: "Falha DRAM intermitente; o POST conclui quando o módulo é pressionado ou movimentado.",
+        smart: "HD/SSD saudável; o teste só fica disponível quando o POST conclui.",
+        thermal: "Temperaturas normais quando a estação consegue inicializar.",
+        network: "Interface normal; o defeito ocorre antes da inicialização da rede.",
+      },
+    },
+    {
       id: "power-failure",
       kind: "hardware",
       level: 1,
@@ -412,6 +454,42 @@ window.SIMULATOR_DATA = (() => {
         smart: "HD/SSD saudável; leitura e escrita normais.",
         thermal: "GPU: 61 °C; CPU: 42 °C. Sem superaquecimento no momento do erro.",
         network: "Rede normal. O defeito permanece mesmo sem conexão de rede.",
+      },
+    },
+    {
+      id: "gpu-contact-contamination",
+      kind: "hardware",
+      level: 2,
+      title: "Contato PCIe contaminado na placa de vídeo",
+      symptom: "A saída de vídeo alterna entre imagem normal, artefatos e ausência de sinal; pressionar levemente a placa altera o comportamento.",
+      boot: "gpu-contact",
+      correctPart: "gpu",
+      correctMaintenance: "clean-isopropyl",
+      explanation: "A GPU estava funcional, mas resíduos nos contatos PCIe e no slot causavam perda intermitente de sinal. A limpeza com álcool isopropílico, pincel antiestático e secagem completa restaurou a conexão sem trocar a placa.",
+      diagnostics: {
+        visual: "Conector PCIe apresenta resíduo e marcas superficiais; trava, cabo de vídeo e alimentação auxiliar estão firmes.",
+        post: "O adaptador gráfico aparece e desaparece da enumeração PCIe entre as tentativas.",
+        smart: "HD/SSD saudável; leitura normal.",
+        thermal: "GPU 44 °C e CPU 39 °C; não há superaquecimento.",
+        network: "Rede normal; o defeito muda quando a placa de vídeo é movimentada.",
+      },
+    },
+    {
+      id: "storage-loose-connection",
+      kind: "hardware",
+      level: 1,
+      title: "HD/SSD desaparece após movimentar o gabinete",
+      symptom: "A UEFI ora detecta o SSD, ora mostra SATA Port Not Present; a falha começou depois que o computador foi transportado.",
+      boot: "storage-intermittent",
+      correctPart: "storage",
+      correctMaintenance: "reseat",
+      explanation: "O HD/SSD estava saudável. O conector SATA havia perdido pressão mecânica durante o transporte; remover, conferir e reencaixar os cabos de dados e alimentação restabeleceu a detecção estável sem substituir a unidade.",
+      diagnostics: {
+        visual: "O cabo SATA está parcialmente encaixado e não atingiu o fim do conector da unidade.",
+        post: "SATA Port 1 alterna entre SIMULAB SSD 480 GB e Not Present.",
+        smart: "Quando detectado, o SSD informa S.M.A.R.T. saudável e zero setores realocados.",
+        thermal: "CPU, placa-mãe e SSD apresentam temperaturas normais.",
+        network: "Interface normal; a inicialização falha quando o SSD não é enumerado.",
       },
     },
     {
@@ -537,6 +615,7 @@ window.SIMULATOR_DATA = (() => {
 
   return {
     hardwareParts,
+    maintenanceTools,
     diagnosticTools,
     softwareActions,
     simulations,
