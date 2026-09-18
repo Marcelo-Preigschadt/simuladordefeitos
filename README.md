@@ -15,6 +15,12 @@ Simulador educacional de diagnóstico de falhas em computadores, desenvolvido em
 - placa-mãe fixa como base do gabinete e componentes substituíveis nos encaixes
   físicos corretos: cooler sobre a CPU, RAM nos DIMMs e placas nos slots PCIe;
 - substituição direta da peça por arrastar e soltar, com retirada e instalação animadas;
+- bancada de peças e ferramentas abaixo do monitor e do gabinete, sem reduzir ou
+  cortar a área de montagem;
+- reparos sem substituição: limpeza de contatos com borracha branca, limpeza com
+  álcool isopropílico e pincel antiestático, além de remoção e reencaixe;
+- casos específicos de oxidação da RAM, contaminação dos contatos PCIe da GPU e
+  conexão SATA parcialmente encaixada;
 - alternativa para telas de toque: selecionar a peça e tocar no encaixe;
 - identificação explícita de unidades como **HD / SSD**;
 - instalação interativa do Windows com idioma, início da instalação, seleção do
@@ -23,6 +29,7 @@ Simulador educacional de diagnóstico de falhas em computadores, desenvolvido em
   de driver, remoção de malware, correção de DNS e ordem de boot;
 - ferramentas de diagnóstico e registro técnico;
 - validação automática da intervenção, erros e pontuação;
+- resultado inline que mantém a tela do computador visível após o reparo;
 - relatório final de desempenho;
 - interface responsiva para computador, tablet e celular.
 
