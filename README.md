@@ -6,7 +6,7 @@ Simulador educacional de diagnóstico de falhas em computadores, desenvolvido em
 
 - identificação do participante e da instituição;
 - cinco casos sorteados por sessão, sempre combinando hardware e software;
-- controle virtual de energia do computador;
+- botão físico de energia integrado ao gabinete, com LED e resposta visual;
 - monitor com estados próprios por defeito: POST, UEFI, Boot Manager, WinRE,
   Gerenciador de Dispositivos, Segurança do Windows, rede, navegador e Windows Setup;
 - gabinete ATX aberto com placa-mãe, processador sob o cooler, fonte, RAM,
@@ -23,8 +23,10 @@ Simulador educacional de diagnóstico de falhas em computadores, desenvolvido em
   conexão SATA parcialmente encaixada;
 - alternativa para telas de toque: selecionar a peça e tocar no encaixe;
 - identificação explícita de unidades como **HD / SSD**;
-- instalação interativa do Windows com idioma, início da instalação, seleção do
+- instalação interativa do Windows com idioma, escolha da edição, seleção do
   SSD, cópia dos arquivos, reinicialização, OOBE e área de trabalho;
+- caso de falha no HD/SSD em duas etapas: substituição física da unidade e,
+  como o SSD novo está vazio, instalação completa do Windows antes da validação;
 - UEFI operável no monitor: o participante abre a aba Boot, seleciona o Windows
   Boot Manager, altera a prioridade e confirma o salvamento e a reinicialização;
 - procedimentos simulados de reparo de boot, instalação de driver, remoção de
