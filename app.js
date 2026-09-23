@@ -33,6 +33,8 @@
     draggedPart: null,
     replacedPart: null,
     maintainedPart: null,
+    repairPhase: "diagnosis",
+    selectedOsEdition: "",
     biosActive: false,
     busy: false,
     caseResolved: false,
@@ -94,10 +96,8 @@
       "toolCounter",
       "terminalLog",
       "clearLogButton",
-      "powerState",
       "powerButton",
-      "powerButtonDetail",
-      "powerHint",
+      "softwarePowerButton",
       "actionEyebrow",
       "actionHeading",
       "attemptsBadge",
@@ -126,12 +126,12 @@
     });
 
     dom.monitorLed = document.querySelector(".monitor-led");
-    dom.powerButtonLabel = document.querySelector(".power-button__label");
   }
 
   function bindEvents() {
     dom.accessForm.addEventListener("submit", startSession);
     dom.powerButton.addEventListener("click", togglePower);
+    dom.softwarePowerButton.addEventListener("click", togglePower);
     dom.clearLogButton.addEventListener("click", () => {
       dom.terminalLog.replaceChildren();
       addLog("Registro visual limpo pelo participante.", "info", "LOG");
@@ -218,6 +218,8 @@
     state.draggedPart = null;
     state.replacedPart = null;
     state.maintainedPart = null;
+    state.repairPhase = "diagnosis";
+    state.selectedOsEdition = "";
     state.biosActive = false;
     state.busy = false;
     state.caseResolved = false;
@@ -345,6 +347,12 @@
 
   function showBootOutcome(activeCase, token = state.sequenceToken) {
     if (!state.computerOn || token !== state.sequenceToken) return;
+
+    if (activeCase.id === "storage-failure" && state.replacedPart === "storage") {
+      renderHardwareVerification(activeCase, getHardwarePart("storage"));
+      addLog("SSD novo detectado, mas nenhuma instalação inicializável foi encontrada.", "warning", "BOOT");
+      return;
+    }
 
     const outcomes = {
       "disk-failure": () => {
@@ -504,19 +512,14 @@
 
   function renderPowerState(status = "normal") {
     const isOn = state.computerOn;
-    dom.powerState.textContent = isOn ? "ON" : status === "fault" ? "FALHA" : "OFF";
-    dom.powerState.className = `state-pill ${isOn ? "is-on" : "is-off"}`;
-    dom.powerButton.classList.toggle("is-on", isOn);
-    dom.powerButton.setAttribute("aria-pressed", String(isOn));
-    dom.powerButtonLabel.textContent = isOn ? "Desligar computador" : "Ligar computador";
-    dom.powerButtonDetail.textContent = isOn
-      ? "Pressione antes de trocar qualquer peça"
-      : "Pressione para observar a inicialização";
-    dom.powerHint.textContent = isOn
-      ? "O computador está energizado. Não remova componentes."
-      : status === "fault"
-        ? "A tentativa de partida falhou."
-        : "A estação está desenergizada.";
+    const powerLabel = isOn ? "Desligar computador" : "Ligar computador";
+    [dom.powerButton, dom.softwarePowerButton].forEach((button) => {
+      button.classList.toggle("is-on", isOn);
+      button.classList.toggle("is-fault", status === "fault");
+      button.setAttribute("aria-pressed", String(isOn));
+      button.setAttribute("aria-label", powerLabel);
+      button.title = powerLabel;
+    });
 
     dom.monitorLed.className = `monitor-led${isOn ? " is-on" : status === "fault" ? " is-warning" : ""}`;
     dom.cabinetState.textContent = isOn ? "ENERGIZADO — NÃO TOCAR" : "SEGURO PARA MANUTENÇÃO";
@@ -871,7 +874,30 @@
     addLog("Teste funcional do componente concluído sem erros.", "success", "OK");
     await wait(950);
     if (token !== state.sequenceToken) return;
+
+    if (activeCase.requiresOsInstallation) {
+      prepareOsInstallationPhase(activeCase);
+      return;
+    }
+
     completeCase();
+  }
+
+  function prepareOsInstallationPhase(activeCase) {
+    state.repairPhase = "install-os";
+    state.busy = false;
+    dom.caseMode.textContent = "HARDWARE + SOFTWARE";
+    dom.actionEyebrow.textContent = "Etapa 2 · Software";
+    dom.actionHeading.textContent = "Instalação no SSD novo";
+    dom.actionHelp.textContent = "A unidade de reposição está saudável, mas vazia. Inicialize a mídia, escolha a edição do Windows e conclua cada etapa do instalador.";
+    dom.cabinetHelp.textContent = "SSD novo instalado. O reparo somente será concluído depois da instalação do sistema operacional.";
+    dom.hardwareInterventions.hidden = true;
+    dom.softwareActions.hidden = false;
+    renderSoftwareActions();
+    addLog("A troca resolveu a falha física, porém o SSD novo não possui sistema operacional.", "warning", "ETAPA 2");
+    addLog("Continue pela mídia de instalação e configure o Windows no SSD novo.", "info", "OS");
+    showToast("SSD novo detectado. Agora instale e configure o Windows.", "info");
+    refreshInteractiveState();
   }
 
   async function attemptMaintenanceAction(toolId, partId) {
@@ -1015,7 +1041,11 @@
   function renderSoftwareActions() {
     dom.softwareActions.replaceChildren();
 
-    softwareActions.forEach((action) => {
+    const availableActions = state.repairPhase === "install-os"
+      ? softwareActions.filter((action) => action.id === "install-os")
+      : softwareActions;
+
+    availableActions.forEach((action) => {
       const button = document.createElement("button");
       button.type = "button";
       button.className = "software-action";
@@ -1026,9 +1056,13 @@
       image.alt = "";
       const text = document.createElement("span");
       const title = document.createElement("strong");
-      title.textContent = action.name;
+      title.textContent = state.repairPhase === "install-os"
+        ? "Iniciar mídia de instalação do Windows"
+        : action.name;
       const description = document.createElement("span");
-      description.textContent = action.description;
+      description.textContent = state.repairPhase === "install-os"
+        ? "Escolher a edição e instalar o sistema no SSD novo."
+        : action.description;
       text.append(title, description);
       const arrow = document.createElement("small");
       arrow.setAttribute("aria-hidden", "true");
@@ -1042,7 +1076,10 @@
 
   async function runSoftwareAction(actionId) {
     const activeCase = getActiveCase();
-    if (!activeCase || activeCase.kind !== "software" || state.busy || state.caseResolved) return;
+    const isStorageInstall = activeCase?.id === "storage-failure"
+      && state.repairPhase === "install-os"
+      && state.replacedPart === "storage";
+    if (!activeCase || (activeCase.kind !== "software" && !isStorageInstall) || state.busy || state.caseResolved) return;
 
     if (!state.computerOn) {
       showToast("Ligue o computador antes de executar um procedimento.", "warning");
@@ -1058,7 +1095,8 @@
     refreshInteractiveState();
     addLog(`Procedimento iniciado: ${action.name}.`, "info", "AÇÃO");
 
-    if (actionId !== activeCase.correctAction) {
+    const correctAction = isStorageInstall ? "install-os" : activeCase.correctAction;
+    if (actionId !== correctAction) {
       registerWrongAction(`${action.name} não resolveu esta ocorrência.`);
       await wait(500);
       if (token !== state.sequenceToken) return;
@@ -1071,7 +1109,8 @@
     if (actionId === "install-os") {
       await runWindowsInstallation(token, action);
       if (token !== state.sequenceToken) return;
-      addLog("Windows instalado, configurado e iniciado pelo SSD.", "success", "OK");
+      state.repairPhase = "complete";
+      addLog(`${state.selectedOsEdition || "Windows 11"} instalado, configurado e iniciado pelo SSD.`, "success", "OK");
       completeCase();
       return;
     }
@@ -1131,18 +1170,53 @@
     await waitForMonitorButton("winLanguageNext", token);
     if (token !== state.sequenceToken) return;
 
+    state.selectedOsEdition = "";
+    setMonitor(
+      "windows-setup",
+      windowsSetupFrame(
+        "Selecione o sistema operacional",
+        `<p class="win-lead">Qual edição do Windows deseja instalar?</p>
+         <div class="win-edition-list" role="listbox" aria-label="Edições disponíveis">
+           <button class="win-edition-row" type="button" data-edition="Windows 11 Education" role="option" aria-selected="false"><strong>Windows 11 Education</strong><span>64 bits · recomendado para o laboratório escolar</span></button>
+           <button class="win-edition-row" type="button" data-edition="Windows 11 Pro" role="option" aria-selected="false"><strong>Windows 11 Pro</strong><span>64 bits · recursos profissionais e de domínio</span></button>
+           <button class="win-edition-row" type="button" data-edition="Windows 11 Home" role="option" aria-selected="false"><strong>Windows 11 Home</strong><span>64 bits · uso doméstico</span></button>
+         </div>
+         <p class="win-edition-help" id="winEditionHelp">Selecione uma edição para continuar.</p>`,
+        `<button class="win-primary" id="winEditionNext" type="button" disabled>Avançar</button>`,
+      ),
+      "ESCOLHA DO SISTEMA",
+    );
+
+    const editionNext = dom.screenContent.querySelector("#winEditionNext");
+    const editionHelp = dom.screenContent.querySelector("#winEditionHelp");
+    dom.screenContent.querySelectorAll("[data-edition]").forEach((button) => {
+      button.addEventListener("click", () => {
+        dom.screenContent.querySelectorAll("[data-edition]").forEach((option) => {
+          const isSelected = option === button;
+          option.classList.toggle("is-selected", isSelected);
+          option.setAttribute("aria-selected", String(isSelected));
+        });
+        state.selectedOsEdition = button.dataset.edition;
+        editionNext.disabled = false;
+        editionHelp.textContent = `${state.selectedOsEdition} será instalado no SSD novo.`;
+      });
+    });
+    await waitForMonitorButton("winEditionNext", token);
+    if (token !== state.sequenceToken) return;
+    addLog(`${state.selectedOsEdition} selecionado para instalação.`, "info", action.short);
+
     setMonitor(
       "windows-setup",
       windowsSetupFrame(
         "Instalação do Windows 11",
-        `<div class="win-install-home">${windowsLogo()}<h3>Windows 11 Education</h3><p>O instalador copiará os arquivos e preparará o computador para o primeiro uso.</p></div>`,
+        `<div class="win-install-home">${windowsLogo()}<h3>${escapeHtml(state.selectedOsEdition)}</h3><p>O instalador copiará os arquivos e preparará o computador para o primeiro uso.</p></div>`,
         `<button class="win-primary win-primary--large" id="winInstallNow" type="button">Instalar agora</button><button class="win-link" type="button" disabled>Reparar o computador</button>`,
       ),
       "WINDOWS SETUP",
     );
     await waitForMonitorButton("winInstallNow", token);
     if (token !== state.sequenceToken) return;
-    addLog("Instalação do Windows 11 Education iniciada.", "info", action.short);
+    addLog(`Instalação do ${state.selectedOsEdition} iniciada.`, "info", action.short);
 
     setMonitor(
       "windows-setup",
@@ -1224,7 +1298,7 @@
     await wait(1200);
     if (token !== state.sequenceToken) return;
 
-    setMonitor("windows-desktop", windowsDesktopScreen("Windows 11 instalado e pronto para uso"), "SISTEMA ATIVO");
+    setMonitor("windows-desktop", windowsDesktopScreen(`${state.selectedOsEdition} instalado e pronto para uso`), "SISTEMA ATIVO");
     addLog("Primeira inicialização concluída; área de trabalho carregada.", "success", action.short);
     await wait(1600);
   }
@@ -1754,6 +1828,7 @@
   function refreshInteractiveState() {
     const disabled = state.busy || state.caseResolved;
     dom.powerButton.disabled = disabled;
+    dom.softwarePowerButton.disabled = disabled;
     dom.clearLogButton.disabled = state.busy;
     dom.toolGrid.querySelectorAll("button").forEach((button) => {
       button.disabled = disabled;
