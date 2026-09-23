@@ -591,7 +591,8 @@ input:focus-visible {
 
 .monitor-screen.is-windows-setup .screen-content,
 .monitor-screen.is-windows-desktop .screen-content,
-.monitor-screen.is-winre .screen-content {
+.monitor-screen.is-winre .screen-content,
+.monitor-screen.is-bios .screen-content {
   height: 100%;
   padding: 0;
 }
@@ -1105,6 +1106,239 @@ input:focus-visible {
 
 .boot-priority { display:grid; grid-template-rows:auto 1fr auto; color:#e6f0f2; background:#071721; font-family:"SFMono-Regular",Consolas,monospace; }.boot-priority > header { display:flex; align-items:center; justify-content:space-between; padding:.5rem .65rem; color:#e9f9fb; background:linear-gradient(90deg,#07577b,#098ba2); font-size:clamp(.43rem,.78vw,.55rem); }.boot-priority > header nav { color:#b6dce2; font-size:clamp(.35rem,.63vw,.45rem); }.boot-priority > header strong { color:#fff; border-bottom:2px solid #fff; }.boot-priority > main { display:grid; grid-template-columns:1fr 31%; gap:.55rem; padding:.58rem; min-height:0; }.boot-priority section,.boot-priority aside { padding:.5rem; border:1px solid #28697c; background:rgba(2,12,17,.48); }.boot-priority section > p { margin:0 0 .45rem; color:#57dce6; font-size:clamp(.39rem,.7vw,.49rem); }.boot-priority ol { display:grid; gap:.25rem; margin:0; padding:0; list-style:none; }.boot-priority li { display:grid; grid-template-columns:25px 1fr auto; gap:.38rem; align-items:center; padding:.35rem; border:1px solid #234b58; color:#bcd0d5; font-size:clamp(.38rem,.68vw,.48rem); }.boot-priority li.is-first { color:#fff; border-color:#23acc3; background:#0d5d73; }.boot-priority li b { display:grid; width:19px; height:19px; place-items:center; border:1px solid currentColor; }.boot-priority li small { color:#7fa2aa; font-size:clamp(.31rem,.56vw,.4rem); }.boot-priority aside { display:grid; align-content:start; grid-template-columns:1fr auto; gap:.28rem; font-size:clamp(.34rem,.62vw,.44rem); }.boot-priority aside b { grid-column:1/-1; margin-bottom:.25rem; color:#59dce6; }.boot-priority aside span { color:#7698a0; }.boot-priority aside em { color:#d3e3e6; font-style:normal; }.boot-alert,.boot-help,.boot-save { margin-top:.45rem; padding:.35rem; border:1px solid #a6404b; color:#ffd7db; background:rgba(133,21,33,.3); font-size:clamp(.34rem,.62vw,.44rem); }.boot-alert { display:grid; gap:.12rem; }.boot-help { color:#b4cbd0; border-color:#285464; background:#0a2530; }.boot-save { display:flex; align-items:center; gap:.4rem; color:#aeeadd; border-color:#23836d; background:#0b332d; }.boot-spinner-small { width:13px; height:13px; border:2px solid rgba(255,255,255,.25); border-top-color:#65edc9; border-radius:50%; animation:win-spinner .8s linear infinite; }.boot-priority > footer { padding:.35rem .6rem; color:#8fc0c8; border-top:1px solid #28697c; background:#06121a; font-size:clamp(.33rem,.6vw,.43rem); }
 
+/* UEFI operável dentro do monitor */
+.boot-device-failure {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  color: #c8d2d5;
+  background: #010304;
+  font-family: "SFMono-Regular", Consolas, monospace;
+}
+
+.boot-device-failure > header {
+  padding: .55rem .7rem;
+  border-bottom: 1px solid #1a262b;
+  color: #49e5b8;
+  font-size: clamp(.48rem, .88vw, .62rem);
+  font-weight: 800;
+  letter-spacing: .08em;
+}
+
+.boot-device-failure__log {
+  display: grid;
+  align-content: center;
+  gap: .27rem;
+  padding: clamp(.7rem, 2vw, 1.15rem);
+  font-size: clamp(.39rem, .72vw, .52rem);
+}
+
+.boot-device-failure__log span { color: #6e8289; }
+.boot-device-failure__log strong { margin-top: .4rem; color: #ffbd72; font-size: clamp(.62rem, 1.2vw, .86rem); }
+
+.boot-device-failure > footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem;
+  padding: .45rem .65rem;
+  border-top: 1px solid #1a262b;
+  color: #778990;
+  font-size: clamp(.34rem, .62vw, .45rem);
+}
+
+.firmware-enter-button,
+.bios-button,
+.bios-tab,
+.bios-boot-option,
+.bios-step-button {
+  border: 1px solid #2f7b91;
+  color: #e8f7fa;
+  background: #0b3f51;
+  font: inherit;
+  cursor: pointer;
+}
+
+.firmware-enter-button {
+  padding: .32rem .48rem;
+  border-color: #37b99c;
+  border-radius: 3px;
+  color: #071a17;
+  background: #4ee1b6;
+  font-size: clamp(.34rem, .62vw, .45rem);
+  font-weight: 800;
+}
+
+.bios-console {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  min-width: 0;
+  min-height: 0;
+  grid-template-rows: auto auto 1fr auto;
+  color: #d9eaee;
+  background:
+    radial-gradient(circle at 84% 18%, rgba(18, 126, 157, .22), transparent 34%),
+    linear-gradient(145deg, #081a24, #061018 62%, #030a0f);
+  font-family: "SFMono-Regular", Consolas, monospace;
+  text-align: left;
+}
+
+.bios-console__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem;
+  padding: .42rem .62rem;
+  border-bottom: 1px solid #2f7385;
+  background: linear-gradient(90deg, #06344b, #087a91 58%, #064054);
+}
+
+.bios-console__brand { display: grid; gap: .04rem; }
+.bios-console__brand strong { color: #fff; font-size: clamp(.48rem, .94vw, .66rem); letter-spacing: .07em; }
+.bios-console__brand small { color: #a7d9e2; font-size: clamp(.28rem, .52vw, .38rem); }
+.bios-console__status { display: flex; gap: .5rem; align-items: center; color: #d2f0f4; font-size: clamp(.3rem, .55vw, .4rem); }
+.bios-console__status i { width: 6px; height: 6px; border-radius: 50%; background: #53efbe; box-shadow: 0 0 8px #53efbe; }
+
+.bios-tabs {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  border-bottom: 1px solid #285d6b;
+  background: #07131b;
+}
+
+.bios-tab {
+  min-width: 0;
+  padding: .34rem .18rem;
+  border: 0;
+  border-right: 1px solid #183743;
+  color: #7fa7b0;
+  background: transparent;
+  font-size: clamp(.33rem, .62vw, .45rem);
+  font-weight: 700;
+}
+
+.bios-tab:hover,
+.bios-tab:focus-visible { color: #fff; background: #0b3443; outline: 1px solid #45c5da; outline-offset: -2px; }
+.bios-tab.is-active { color: #fff; background: linear-gradient(#12829a, #0a566c); box-shadow: inset 0 -2px #62e3e8; }
+
+.bios-console__body {
+  display: grid;
+  min-height: 0;
+  grid-template-columns: minmax(0, 1fr) 30%;
+  gap: .45rem;
+  padding: .48rem;
+}
+
+.bios-panel,
+.bios-help-panel {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid #285d6b;
+  background: rgba(2, 11, 16, .62);
+}
+
+.bios-panel { padding: .46rem; }
+.bios-help-panel { display: grid; align-content: start; gap: .16rem; padding: .45rem; }
+.bios-panel__title { margin: 0 0 .36rem; color: #62e1e9; font-size: clamp(.38rem, .7vw, .5rem); letter-spacing: .06em; text-transform: uppercase; }
+.bios-help-panel strong { margin-bottom: .1rem; color: #5de6c0; font-size: clamp(.36rem, .66vw, .47rem); }
+.bios-help-panel span { color: #7d9ba3; font-size: clamp(.29rem, .54vw, .39rem); line-height: 1.35; }
+.bios-help-panel b { margin-bottom: .18rem; color: #dbe9ec; font-size: clamp(.31rem, .57vw, .41rem); }
+
+.bios-data-grid { display: grid; border-top: 1px solid #1d4652; }
+.bios-data-row { display: grid; grid-template-columns: 1.25fr 1fr; gap: .35rem; padding: .28rem .34rem; border-bottom: 1px solid #163944; font-size: clamp(.33rem, .61vw, .44rem); }
+.bios-data-row:nth-child(odd) { background: rgba(36, 113, 132, .09); }
+.bios-data-row span { color: #7da1aa; }
+.bios-data-row b { color: #e4f1f3; font-weight: 600; }
+
+.bios-boot-list { display: grid; gap: .24rem; }
+.bios-boot-option {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 22px minmax(0, 1fr) auto;
+  gap: .35rem;
+  align-items: center;
+  padding: .31rem .38rem;
+  border-color: #234c59;
+  color: #bfd0d4;
+  background: #081a22;
+  font-size: clamp(.32rem, .59vw, .43rem);
+  text-align: left;
+}
+
+.bios-boot-option > b { display: grid; width: 18px; height: 18px; place-items: center; border: 1px solid #54727a; color: #8cb2ba; }
+.bios-boot-option > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bios-boot-option > small { color: #66858e; font-size: clamp(.27rem, .48vw, .35rem); }
+.bios-boot-option:hover,
+.bios-boot-option:focus-visible { border-color: #43b6cc; background: #0b3342; outline: none; }
+.bios-boot-option.is-selected { border-color: #57dce6; color: #fff; background: #0d5266; box-shadow: inset 3px 0 #5be7c1; }
+.bios-boot-option.is-first > b { color: #071913; border-color: #53e4b9; background: #53e4b9; }
+
+.bios-order-controls { display: flex; gap: .28rem; margin-top: .35rem; }
+.bios-step-button { padding: .29rem .42rem; border-radius: 3px; font-size: clamp(.3rem, .55vw, .4rem); }
+.bios-step-button:disabled { opacity: .35; cursor: not-allowed; }
+.bios-step-button:not(:disabled):hover { border-color: #5de6c0; background: #0b5361; }
+.bios-guidance { margin: .38rem 0 0; padding: .3rem .36rem; border-left: 2px solid #e9a94b; color: #c8ab78; background: rgba(128, 77, 16, .18); font-size: clamp(.29rem, .54vw, .39rem); line-height: 1.35; }
+.bios-guidance.is-ready { border-color: #4be1b6; color: #a9e8d6; background: rgba(18, 110, 84, .2); }
+
+.bios-console__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .45rem;
+  padding: .36rem .5rem;
+  border-top: 1px solid #285d6b;
+  color: #73939b;
+  background: #061119;
+  font-size: clamp(.28rem, .52vw, .38rem);
+}
+
+.bios-console__footer div { display: flex; gap: .25rem; }
+.bios-button { padding: .28rem .42rem; border-radius: 3px; font-size: clamp(.3rem, .56vw, .41rem); font-weight: 700; }
+.bios-button:hover,
+.bios-button:focus-visible { border-color: #66ead0; background: #0d5c66; outline: none; }
+.bios-button--primary { color: #071914; border-color: #4ee1b6; background: #4ee1b6; }
+.bios-button--danger { color: #ffdce0; border-color: #8c3b49; background: #4c1e28; }
+
+.bios-confirmation {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(0, 5, 8, .76);
+}
+
+.bios-confirmation__dialog {
+  width: min(76%, 360px);
+  padding: .65rem;
+  border: 1px solid #62dfe5;
+  background: #08232d;
+  box-shadow: 0 18px 45px #000;
+  text-align: center;
+}
+
+.bios-confirmation__dialog strong { display: block; color: #fff; font-size: clamp(.48rem, .9vw, .63rem); }
+.bios-confirmation__dialog p { margin: .28rem 0 .55rem; color: #9eb8be; font-size: clamp(.32rem, .59vw, .42rem); line-height: 1.4; }
+.bios-confirmation__actions { display: flex; justify-content: center; gap: .35rem; }
+
+.bios-save-progress {
+  grid-row: 2 / -1;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: .38rem;
+  color: #dcebed;
+  text-align: center;
+}
+
+.bios-save-progress .boot-spinner-small { width: 28px; height: 28px; }
+.bios-save-progress strong { font-size: clamp(.5rem, .95vw, .68rem); }
+.bios-save-progress small { color: #77949b; font-size: clamp(.32rem, .58vw, .42rem); }
+
 @keyframes video-glitch {
   0% { transform:translate(0); filter:hue-rotate(0); }
   50% { transform:translate(7px,-3px); filter:hue-rotate(35deg); }
@@ -1206,7 +1440,7 @@ input:focus-visible {
   position: relative;
   width: 100%;
   min-height: 520px;
-  aspect-ratio: 1.42 / 1;
+  aspect-ratio: 1.48 / 1;
   overflow: hidden;
   border: 8px solid #26343c;
   border-radius: 18px 7px 7px 18px;
@@ -1312,8 +1546,8 @@ input:focus-visible {
 
 .cpu-underlay {
   position: absolute;
-  top: 22%;
-  left: 35%;
+  top: 21%;
+  left: 36%;
   z-index: 9;
   display: grid;
   width: 17%;
@@ -1359,48 +1593,6 @@ input:focus-visible {
 .cpu-underlay > i:nth-of-type(3) { right: 2px; bottom: 2px; }
 .cpu-underlay > i:nth-of-type(4) { bottom: 2px; left: 2px; }
 
-.case-wiring {
-  position: absolute;
-  z-index: 8;
-  border-style: solid;
-  border-color: transparent;
-  opacity: 0.88;
-}
-
-.case-wiring--atx {
-  right: 21%;
-  bottom: 10%;
-  width: 17%;
-  height: 48%;
-  border-width: 0 5px 5px 0;
-  border-right-color: #caa82f;
-  border-bottom-color: #caa82f;
-  border-radius: 0 0 16px;
-  box-shadow: 3px 2px 0 #1c1d1c, 6px 4px 0 #8b302c;
-}
-
-.case-wiring--sata {
-  right: 9%;
-  bottom: 31%;
-  width: 18%;
-  height: 13%;
-  border-width: 0 0 3px 3px;
-  border-bottom-color: #d43a3a;
-  border-left-color: #d43a3a;
-  border-radius: 0 0 0 13px;
-}
-
-.case-wiring--pcie {
-  bottom: 11%;
-  left: 22%;
-  width: 29%;
-  height: 8%;
-  border-width: 0 0 4px;
-  border-bottom-color: #202326;
-  box-shadow: 0 3px 0 #d8c22c;
-  transform: rotate(7deg);
-}
-
 .board-debug-led,
 .storage-activity-led,
 .network-link-led {
@@ -1439,17 +1631,17 @@ input:focus-visible {
 
 .cabinet-slots {
   position: absolute;
-  inset: 22px 22px 38px 22px;
+  inset: 22px;
   z-index: 4;
 }
 
 .motherboard-base {
   position: absolute;
-  top: 5%;
-  left: 17%;
+  top: 4%;
+  left: 16.5%;
   z-index: 2;
-  width: 60%;
-  height: 73%;
+  width: 62%;
+  height: 78%;
   pointer-events: none;
 }
 
@@ -1472,12 +1664,12 @@ input:focus-visible {
   box-shadow: 0 0 0 3px rgba(75, 201, 255, 0.1), 0 0 22px rgba(75, 201, 255, 0.18);
 }
 
-.cabinet-slot--power { bottom: 1.5%; left: 1.5%; z-index: 15; width: 31%; height: 17%; }
-.cabinet-slot--cooler { top: 21%; left: 34%; z-index: 18; width: 19%; aspect-ratio: 1; }
-.cabinet-slot--memory { top: 15%; left: 57%; z-index: 14; width: 8%; height: 36%; }
-.cabinet-slot--storage { top: 13%; right: 1%; z-index: 15; width: 17%; height: 18%; }
-.cabinet-slot--gpu { top: 54%; left: 22%; z-index: 20; width: 49%; height: 15%; }
-.cabinet-slot--network { top: 72%; left: 37%; z-index: 19; width: 29%; height: 9%; }
+.cabinet-slot--power { bottom: 2%; left: 1.7%; z-index: 15; width: 29%; height: 17%; }
+.cabinet-slot--cooler { top: 20.5%; left: 36%; z-index: 18; width: 18%; aspect-ratio: 1; }
+.cabinet-slot--memory { top: 14%; left: 58%; z-index: 14; width: 8%; height: 38%; }
+.cabinet-slot--storage { top: 14%; right: 1.8%; z-index: 15; width: 16%; height: 19%; }
+.cabinet-slot--gpu { top: 48%; left: 23%; z-index: 20; width: 49%; height: 17%; }
+.cabinet-slot--network { top: 69%; left: 36%; z-index: 19; width: 29%; height: 10%; }
 
 .hardware-visual {
   position: absolute;
@@ -1490,7 +1682,7 @@ input:focus-visible {
 .motherboard-svg {
   width: 100%;
   height: 100%;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .component-tooltip {
@@ -1563,33 +1755,6 @@ input:focus-visible {
   font-size: 0.68rem;
   font-weight: 900;
 }
-
-.chassis-legend {
-  position: absolute;
-  right: 17px;
-  bottom: 12px;
-  z-index: 20;
-  display: flex;
-  gap: 0.65rem;
-  color: #5b7079;
-  font-family: monospace;
-  font-size: 0.48rem;
-}
-
-.chassis-legend span {
-  display: flex;
-  align-items: center;
-  gap: 0.24rem;
-}
-
-.legend-dot {
-  width: 6px;
-  height: 2px;
-}
-
-.legend-dot--power { background: #caa82f; }
-.legend-dot--data { background: #d43a3a; }
-.legend-dot--signal { background: #69767c; }
 
 /* Componentes físicos */
 .fan-assembly {
@@ -1747,7 +1912,7 @@ input:focus-visible {
   padding: 4px;
   border-radius: 7px;
   background: #535e62;
-  transform: rotate(4deg);
+  box-shadow: inset 0 0 0 1px #a9b2b4, 0 5px 10px rgba(0, 0, 0, 0.55);
 }
 
 .heatsink i { background: linear-gradient(90deg, #3c484c, #d0d5d4 48%, #4d595c); }
@@ -1871,7 +2036,7 @@ input:focus-visible {
 .gpu-fan--one { left:15%; }
 .gpu-fan--two { right:15%; }
 .gpu-brand { position:absolute; right:39%; bottom:4%; color:#6fb4a7; font-family:monospace; font-size:clamp(.26rem,.52vw,.45rem); letter-spacing:.08em; }
-.gpu-edge { position:absolute; right:8%; bottom:-4%; left:10%; height:5%; background:repeating-linear-gradient(90deg,#d0ad38 0 4px,#1e2425 5px 6px); }
+.gpu-edge { position:absolute; top:-4%; right:8%; left:10%; height:5%; background:repeating-linear-gradient(90deg,#d0ad38 0 4px,#1e2425 5px 6px); }
 
 .nic-board {
   border: 1px solid #34786c;
@@ -2996,8 +3161,18 @@ input:focus-visible {
   }
 
   .open-cabinet {
-    min-height: 440px;
+    min-height: 0;
   }
+
+  .bios-console__status,
+  .bios-help-panel { display: none; }
+
+  .bios-console__body { grid-template-columns: 1fr; }
+  .bios-console__footer > span { display: none; }
+  .bios-console__footer { justify-content: flex-end; }
+  .bios-panel { padding: .32rem; }
+  .bios-boot-option { padding: .22rem .3rem; }
+  .bios-guidance { margin-top: .24rem; padding: .22rem .28rem; }
 
   .tool-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -3043,10 +3218,16 @@ input:focus-visible {
   }
 
   .open-cabinet {
-    min-height: 410px;
+    min-height: 0;
     max-height: none;
     overflow: hidden;
   }
+
+  .bios-console__brand small,
+  .bios-guidance { display: none; }
+
+  .bios-console__footer { padding: .25rem .32rem; }
+  .bios-button { padding: .22rem .3rem; }
 
   .parts-tray {
     grid-template-columns: repeat(2, minmax(0, 1fr));
