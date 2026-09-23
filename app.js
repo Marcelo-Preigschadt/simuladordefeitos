@@ -33,6 +33,7 @@
     draggedPart: null,
     replacedPart: null,
     maintainedPart: null,
+    biosActive: false,
     busy: false,
     caseResolved: false,
     finished: false,
@@ -217,6 +218,7 @@
     state.draggedPart = null;
     state.replacedPart = null;
     state.maintainedPart = null;
+    state.biosActive = false;
     state.busy = false;
     state.caseResolved = false;
 
@@ -335,6 +337,7 @@
   function powerOff() {
     state.sequenceToken += 1;
     state.computerOn = false;
+    state.biosActive = false;
     renderPowerState();
     setMonitor("off", '<span class="screen-off-label">COMPUTADOR DESLIGADO</span>');
     addLog("Desligamento manual executado. Gabinete seguro para intervenção.", "warning", "PWR");
@@ -482,10 +485,12 @@
       "usb-boot": () => {
         setMonitor(
           "bios",
-          bootPriorityScreen(["USB Mass Storage", "Windows Boot Manager", "Network PXE"], "usb-error"),
-          "UEFI · BOOT USB",
+          usbBootFailureScreen(),
+          "BOOT · DISPOSITIVO INCORRETO",
         );
         addLog("UEFI tentou iniciar pelo dispositivo USB conectado.", "warning", "UEFI");
+        const enterSetup = dom.screenContent.querySelector("#enterUefiSetup");
+        enterSetup?.addEventListener("click", () => runSoftwareAction("configure-boot"), { once: true });
       },
     };
 
@@ -745,7 +750,7 @@
 
     const visuals = {
       motherboard: `
-        <svg class="motherboard-svg" viewBox="0 0 460 410" preserveAspectRatio="none" role="presentation">
+        <svg class="motherboard-svg" viewBox="0 0 460 410" preserveAspectRatio="xMidYMid meet" role="presentation">
           <defs>
             <linearGradient id="pcb-${context}" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#123f3c"/><stop offset="1" stop-color="#071d23"/></linearGradient>
             <linearGradient id="metal-${context}" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#c9d4d7"/><stop offset=".48" stop-color="#53636b"/><stop offset="1" stop-color="#d8e1e2"/></linearGradient>
@@ -753,8 +758,8 @@
           </defs>
           <path d="M8 8h408l35 35v359H8z" fill="url(#pcb-${context})" stroke="#4d8f86" stroke-width="5"/>
           <path d="M20 20h384l33 31v337H20z" fill="url(#pins-${context})" opacity=".28"/>
-          <g fill="none" stroke="#24776e" stroke-width="2" opacity=".68">
-            <path d="M36 225h88l28-27h128l34-44h101"/><path d="M34 294h96l35 37h240"/><path d="M46 108h77l39-42h146l31 31h80"/><path d="M68 370v-38h138l41 34h138"/><path d="M261 25v47l-39 28v91"/><path d="M335 72v168l-25 26"/>
+          <g fill="none" stroke="#24776e" stroke-width="1.4" opacity=".22">
+            <path d="M36 225h88l28-27h128"/><path d="M34 294h96l35 37h92"/><path d="M46 108h77l39-42h92"/><path d="M261 25v47l-39 28v52"/>
           </g>
           <g fill="#8fb4ad"><circle cx="28" cy="28" r="6"/><circle cx="421" cy="57" r="6"/><circle cx="421" cy="374" r="6"/><circle cx="28" cy="374" r="6"/><circle cx="235" cy="386" r="5"/></g>
           <g fill="#c6d0d1" stroke="#607179" stroke-width="2"><rect x="17" y="48" width="61" height="27"/><rect x="17" y="81" width="61" height="34"/><rect x="17" y="121" width="61" height="23"/><rect x="17" y="151" width="61" height="23"/></g>
@@ -780,7 +785,7 @@
           <span class="psu-face">${fan("psu-fan")}</span>
           <span class="psu-side"><b>ATX</b><em>650 W</em><small>80 PLUS</small></span>
           <span class="psu-socket"></span><span class="psu-switch"></span>
-          <span class="psu-leads"><i></i><i></i><i></i><i></i></span>
+          ${context === "installed" ? "" : '<span class="psu-leads"><i></i><i></i><i></i><i></i></span>'}
         </span>`,
       cooler: `
         <span class="cpu-cooler">
@@ -1071,6 +1076,22 @@
       return;
     }
 
+    if (actionId === "configure-boot") {
+      const saved = await runInteractiveBios(token, action);
+      if (!saved || token !== state.sequenceToken) {
+        if (token === state.sequenceToken) {
+          state.busy = false;
+          state.biosActive = false;
+          showBootOutcome(activeCase, token);
+          refreshInteractiveState();
+        }
+        return;
+      }
+      addLog("Prioridade salva na UEFI; Windows Boot Manager iniciou corretamente.", "success", "OK");
+      completeCase();
+      return;
+    }
+
     const steps = simulations[actionId] || [];
     for (const [stepIndex, step] of steps.entries()) {
       if (token !== state.sequenceToken || !state.computerOn) return;
@@ -1221,6 +1242,115 @@
     });
   }
 
+  function runInteractiveBios(token, action) {
+    state.biosActive = true;
+    let activeTab = "MAIN";
+    let order = ["USB Mass Storage", "Windows Boot Manager", "Network PXE"];
+    let selectedIndex = 0;
+    let confirmationOpen = false;
+    let saveAttempted = false;
+
+    addLog("UEFI Setup aberto. Aguardando configuração manual do participante.", "info", action.short);
+
+    return new Promise((resolve) => {
+      const finish = (saved) => {
+        state.biosActive = false;
+        resolve(saved);
+      };
+
+      const render = () => {
+        if (token !== state.sequenceToken || !state.computerOn) {
+          finish(false);
+          return;
+        }
+
+        setMonitor(
+          "bios",
+          interactiveBiosScreen({ activeTab, order, selectedIndex, confirmationOpen, saveAttempted }),
+          activeTab === "BOOT" ? "UEFI SETUP · BOOT" : `UEFI SETUP · ${activeTab}`,
+        );
+
+        dom.screenContent.querySelectorAll("[data-bios-tab]").forEach((button) => {
+          button.addEventListener("click", () => {
+            activeTab = button.dataset.biosTab;
+            confirmationOpen = false;
+            saveAttempted = false;
+            render();
+          });
+        });
+
+        dom.screenContent.querySelectorAll("[data-boot-index]").forEach((button) => {
+          button.addEventListener("click", () => {
+            selectedIndex = Number(button.dataset.bootIndex);
+            saveAttempted = false;
+            render();
+          });
+        });
+
+        dom.screenContent.querySelector("#biosMoveUp")?.addEventListener("click", () => {
+          if (selectedIndex <= 0) return;
+          [order[selectedIndex - 1], order[selectedIndex]] = [order[selectedIndex], order[selectedIndex - 1]];
+          selectedIndex -= 1;
+          saveAttempted = false;
+          addLog(`${order[selectedIndex]} movido para a prioridade ${selectedIndex + 1}.`, "info", "BOOT");
+          render();
+        });
+
+        dom.screenContent.querySelector("#biosMoveDown")?.addEventListener("click", () => {
+          if (selectedIndex >= order.length - 1) return;
+          [order[selectedIndex + 1], order[selectedIndex]] = [order[selectedIndex], order[selectedIndex + 1]];
+          selectedIndex += 1;
+          saveAttempted = false;
+          addLog(`${order[selectedIndex]} movido para a prioridade ${selectedIndex + 1}.`, "info", "BOOT");
+          render();
+        });
+
+        dom.screenContent.querySelector("#biosDiscard")?.addEventListener("click", () => {
+          addLog("UEFI fechada sem salvar; a ordem de boot permaneceu incorreta.", "warning", "UEFI");
+          finish(false);
+        }, { once: true });
+
+        dom.screenContent.querySelector("#biosSave")?.addEventListener("click", () => {
+          if (order[0] !== "Windows Boot Manager") {
+            activeTab = "BOOT";
+            selectedIndex = order.indexOf("Windows Boot Manager");
+            saveAttempted = true;
+            render();
+            return;
+          }
+          confirmationOpen = true;
+          render();
+        });
+
+        dom.screenContent.querySelector("#biosConfirmNo")?.addEventListener("click", () => {
+          confirmationOpen = false;
+          render();
+        });
+
+        dom.screenContent.querySelector("#biosConfirmYes")?.addEventListener("click", async () => {
+          confirmationOpen = false;
+          setMonitor("bios", biosSavingScreen(), "UEFI · SALVANDO");
+          addLog("Configuração gravada na NVRAM. Reinicialização solicitada.", "success", "UEFI");
+          await wait(850);
+          if (token !== state.sequenceToken || !state.computerOn) return finish(false);
+
+          setMonitor("booting", windowsBootScreen("Iniciando pelo Windows Boot Manager..."), "BOOT · WINDOWS");
+          await wait(950);
+          if (token !== state.sequenceToken || !state.computerOn) return finish(false);
+
+          dom.factUefi.textContent = "Windows primeiro";
+          dom.factStorage.textContent = "Saudável";
+          dom.factOs.textContent = "Em execução";
+          dom.factNetwork.textContent = "Inicializando";
+          setMonitor("windows-desktop", windowsDesktopScreen("Ordem de boot corrigida na UEFI"), "SISTEMA ATIVO");
+          finish(true);
+        }, { once: true });
+      };
+
+      render();
+    });
+  }
+
   function windowsLogo() {
     return '<span class="windows-logo" aria-hidden="true"><i></i><i></i><i></i><i></i></span>';
   }
@@ -1313,6 +1443,99 @@
     const renderedLines = lines.map((line) => `<span>${escapeHtml(line)}</span>`).join("");
     const captions = ["Configuração IPv4 — DNS automático", "Prompt de Comando — cache DNS", "Prompt de Comando — teste de resolução"];
     return `<div class="dns-repair"><header>${escapeHtml(captions[stepIndex] || captions[2])}<small>Administrador: Windows Terminal</small></header><main><div class="terminal-command"><span>Microsoft Windows [versão 10.0.26100]</span><span>(c) Microsoft Corporation. Todos os direitos reservados.</span><br>${renderedLines}<i class="terminal-cursor"></i></div><div class="dns-route"><span class="is-ok">PC</span><i></i><span class="is-ok">192.168.10.1</span><i class="${stepIndex > 1 ? "is-ok" : ""}"></i><span class="${stepIndex > 1 ? "is-ok" : ""}">DNS</span></div><div class="dns-progress"><span style="width:${progress}%"></span></div></main></div>`;
+  }
+
+  function usbBootFailureScreen() {
+    return `<div class="boot-device-failure">
+      <header>SIMULAB UEFI · POST 2.24</header>
+      <div class="boot-device-failure__log">
+        <span>CPU: AMD64 Training Processor ................................ OK</span>
+        <span>Memory Test: 16384 MB ....................................... OK</span>
+        <span>SATA Port 1: SIMULAB SSD 480 GB ............................. OK</span>
+        <span>Boot Option #1: UEFI USB Mass Storage</span>
+        <span>Loading boot sector from USB device...</span>
+        <strong>Missing operating system</strong>
+      </div>
+      <footer><span>DEL: Setup · F11: Boot Menu</span><button class="firmware-enter-button" id="enterUefiSetup" type="button">Entrar na UEFI</button></footer>
+    </div>`;
+  }
+
+  function interactiveBiosScreen({ activeTab, order, selectedIndex, confirmationOpen, saveAttempted }) {
+    const tabs = ["MAIN", "ADVANCED", "MONITOR", "BOOT", "EXIT"];
+    const tabNames = { MAIN: "Principal", ADVANCED: "Avançado", MONITOR: "Monitor", BOOT: "Boot", EXIT: "Sair" };
+    const renderedTabs = tabs.map((tab) => `<button class="bios-tab${activeTab === tab ? " is-active" : ""}" data-bios-tab="${tab}" type="button">${tabNames[tab]}</button>`).join("");
+    const dataRows = (rows) => `<div class="bios-data-grid">${rows.map(([label, value]) => `<div class="bios-data-row"><span>${escapeHtml(label)}</span><b>${escapeHtml(value)}</b></div>`).join("")}</div>`;
+
+    let panelTitle = "Informações do sistema";
+    let panelContent = dataRows([
+      ["UEFI BIOS Version", "2.24.0917"],
+      ["Processador", "AMD64 Training CPU"],
+      ["Memória total", "16384 MB (DDR4-3200)"],
+      ["SATA Port 1", "SIMULAB SSD 480 GB"],
+      ["Idioma", "Português (Brasil)"],
+    ]);
+    let helpTitle = "Ajuda — Principal";
+    let helpText = "Confira os dispositivos reconhecidos antes de alterar a configuração de inicialização.";
+
+    if (activeTab === "ADVANCED") {
+      panelTitle = "Configuração avançada";
+      panelContent = dataRows([
+        ["SATA Mode", "AHCI"],
+        ["USB Controller", "Enabled"],
+        ["PCIe Link Speed", "Auto"],
+        ["Above 4G Decoding", "Enabled"],
+        ["Virtualization", "Enabled"],
+      ]);
+      helpTitle = "Ajuda — Avançado";
+      helpText = "Parâmetros do chipset e dos controladores. Nenhuma alteração é necessária neste caso.";
+    } else if (activeTab === "MONITOR") {
+      panelTitle = "Monitor de hardware";
+      panelContent = dataRows([
+        ["CPU Temperature", "41 °C"],
+        ["CPU Fan Speed", "1280 RPM"],
+        ["Motherboard", "33 °C"],
+        ["CPU Core Voltage", "1.176 V"],
+        ["+12 V", "12.096 V"],
+      ]);
+      helpTitle = "Ajuda — Monitor";
+      helpText = "Temperaturas, rotações e tensões estão dentro dos limites normais.";
+    } else if (activeTab === "BOOT") {
+      const renderedOrder = order.map((item, index) => `<button class="bios-boot-option${selectedIndex === index ? " is-selected" : ""}${index === 0 ? " is-first" : ""}" data-boot-index="${index}" type="button"><b>${index + 1}</b><span>${escapeHtml(item)}</span><small>${item.includes("Windows") ? "NVMe/SATA" : item.includes("USB") ? "UEFI USB" : "IPv4"}</small></button>`).join("");
+      const ready = order[0] === "Windows Boot Manager";
+      panelTitle = "Prioridades de inicialização";
+      panelContent = `<div class="bios-boot-list">${renderedOrder}</div>
+        <div class="bios-order-controls">
+          <button class="bios-step-button" id="biosMoveUp" type="button"${selectedIndex === 0 ? " disabled" : ""}>↑ Subir prioridade</button>
+          <button class="bios-step-button" id="biosMoveDown" type="button"${selectedIndex === order.length - 1 ? " disabled" : ""}>↓ Descer prioridade</button>
+        </div>
+        <p class="bios-guidance${ready ? " is-ready" : ""}">${saveAttempted ? "A ordem ainda inicia pelo USB. Selecione Windows Boot Manager e mova-o para a posição 1 antes de salvar." : ready ? "Ordem correta. Use “F10 Salvar e sair” para gravar a alteração." : "Selecione Windows Boot Manager e use “Subir prioridade” para colocá-lo na posição 1."}</p>`;
+      helpTitle = "Ajuda — Boot";
+      helpText = "A UEFI tenta cada opção na ordem exibida. O sistema instalado deve ser a primeira opção.";
+    } else if (activeTab === "EXIT") {
+      panelTitle = "Salvar e sair";
+      const ready = order[0] === "Windows Boot Manager";
+      panelContent = dataRows([
+        ["Boot Option #1", order[0]],
+        ["Alterações pendentes", ready ? "1" : "0"],
+        ["Próxima ação", ready ? "Salvar e reiniciar" : "Retornar à aba Boot"],
+      ]);
+      helpTitle = "Ajuda — Sair";
+      helpText = ready ? "Salve as mudanças na NVRAM e reinicie o computador." : "A prioridade continua incorreta; volte à aba Boot antes de salvar.";
+    }
+
+    const confirmation = confirmationOpen ? `<div class="bios-confirmation"><div class="bios-confirmation__dialog"><strong>Salvar configuração e reiniciar?</strong><p>A nova ordem de boot será gravada na NVRAM.</p><div class="bios-confirmation__actions"><button class="bios-button bios-button--primary" id="biosConfirmYes" type="button">Sim, salvar</button><button class="bios-button" id="biosConfirmNo" type="button">Cancelar</button></div></div></div>` : "";
+
+    return `<div class="bios-console">
+      <header class="bios-console__header"><span class="bios-console__brand"><strong>SIMULAB UEFI BIOS UTILITY</strong><small>Advanced Mode · Version 2.24.0917</small></span><span class="bios-console__status"><i></i> SSD detectado · 10:42</span></header>
+      <nav class="bios-tabs" aria-label="Abas da UEFI">${renderedTabs}</nav>
+      <main class="bios-console__body"><section class="bios-panel"><p class="bios-panel__title">${escapeHtml(panelTitle)}</p>${panelContent}</section><aside class="bios-help-panel"><strong>${escapeHtml(helpTitle)}</strong><span>${escapeHtml(helpText)}</span><strong>Placa-mãe</strong><b>SIMULAB B650M</b><strong>Modo</strong><b>UEFI · Secure Boot ativo</b></aside></main>
+      <footer class="bios-console__footer"><span>Clique nas opções para navegar e alterar valores</span><div><button class="bios-button bios-button--danger" id="biosDiscard" type="button">Esc Sair sem salvar</button><button class="bios-button bios-button--primary" id="biosSave" type="button">F10 Salvar e sair</button></div></footer>
+      ${confirmation}
+    </div>`;
+  }
+
+  function biosSavingScreen() {
+    return `<div class="bios-console"><header class="bios-console__header"><span class="bios-console__brand"><strong>SIMULAB UEFI BIOS UTILITY</strong><small>Gravando configuração</small></span></header><div class="bios-save-progress"><span class="boot-spinner-small"></span><strong>Saving configuration and resetting...</strong><small>Não desligue o computador.</small></div></div>`;
   }
 
   function bootPriorityScreen(order, state = "editing") {
