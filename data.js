@@ -361,7 +361,8 @@ window.SIMULATOR_DATA = (() => {
       symptom: "A inicialização trava, aparecem erros de E/S e a UEFI exibe o alerta S.M.A.R.T. Status BAD.",
       boot: "disk-failure",
       correctPart: "storage",
-      explanation: "O HD/SSD apresentava setores instáveis e falhas de leitura. A substituição da unidade eliminou os erros e permitiu uma instalação íntegra.",
+      requiresOsInstallation: true,
+      explanation: "O HD/SSD apresentava setores instáveis e falhas de leitura. Depois da substituição, o SSD novo ainda estava vazio; foi necessário escolher uma edição, instalar e configurar o Windows para concluir o reparo.",
       diagnostics: {
         visual: "Cabos SATA e alimentação estão firmes. Não há conector solto.",
         post: "POST concluído com alerta: S.M.A.R.T. Status BAD — Backup and Replace.",
