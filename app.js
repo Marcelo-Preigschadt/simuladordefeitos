@@ -798,9 +798,9 @@
       storage: `
         <span class="storage-kit"><span class="ssd-drive"><i></i><b>SSD</b><small>480 GB</small><em></em></span>${context === "replacement" ? '<span class="hdd-drive"><i></i><b>HDD</b><small>1 TB</small><em></em></span>' : ""}</span>`,
       gpu: `
-        <span class="gpu-board"><span class="gpu-backplate"></span><span class="gpu-bracket"></span><span class="gpu-power"></span>${fan("gpu-fan gpu-fan--one")}${fan("gpu-fan gpu-fan--two")}<span class="gpu-brand">GRAPHICS</span><span class="gpu-edge"></span></span>`,
+        <span class="gpu-board"><span class="gpu-backplate"></span><span class="gpu-bracket"></span><span class="gpu-power"></span>${fan("gpu-fan gpu-fan--one")}${fan("gpu-fan gpu-fan--two")}<span class="gpu-brand">GRAPHICS</span>${context === "installed" ? "" : '<span class="gpu-edge"></span>'}</span>`,
       network: `
-        <span class="nic-board"><span class="nic-bracket"></span><span class="nic-port"><i></i><i></i></span><span class="nic-chip">GbE</span><span class="nic-components"><i></i><i></i><i></i><i></i></span><span class="nic-edge"></span></span>`,
+        <span class="nic-board"><span class="nic-bracket"></span><span class="nic-port"><i></i><i></i></span><span class="nic-chip">GbE</span><span class="nic-components"><i></i><i></i><i></i><i></i></span>${context === "installed" ? "" : '<span class="nic-edge"></span>'}</span>`,
     };
 
     return visuals[partId] || "";
