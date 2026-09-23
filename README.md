@@ -10,7 +10,7 @@ Simulador educacional de diagnóstico de falhas em computadores, desenvolvido em
 - monitor com estados próprios por defeito: POST, UEFI, Boot Manager, WinRE,
   Gerenciador de Dispositivos, Segurança do Windows, rede, navegador e Windows Setup;
 - gabinete ATX aberto com placa-mãe, processador sob o cooler, fonte, RAM,
-  GPU, placa de rede, HD/SSD, cabos e baias nas posições físicas;
+  GPU, placa de rede, HD/SSD e baias alinhados nas posições físicas;
 - ventoinhas, LEDs de diagnóstico e atividade que respondem à energia e ao defeito;
 - placa-mãe fixa como base do gabinete e componentes substituíveis nos encaixes
   físicos corretos: cooler sobre a CPU, RAM nos DIMMs e placas nos slots PCIe;
@@ -25,8 +25,10 @@ Simulador educacional de diagnóstico de falhas em computadores, desenvolvido em
 - identificação explícita de unidades como **HD / SSD**;
 - instalação interativa do Windows com idioma, início da instalação, seleção do
   SSD, cópia dos arquivos, reinicialização, OOBE e área de trabalho;
-- procedimentos simulados de reparo de boot, instalação
-  de driver, remoção de malware, correção de DNS e ordem de boot;
+- UEFI operável no monitor: o participante abre a aba Boot, seleciona o Windows
+  Boot Manager, altera a prioridade e confirma o salvamento e a reinicialização;
+- procedimentos simulados de reparo de boot, instalação de driver, remoção de
+  malware e correção de DNS;
 - ferramentas de diagnóstico e registro técnico;
 - validação automática da intervenção, erros e pontuação;
 - resultado inline que mantém a tela do computador visível após o reparo;
