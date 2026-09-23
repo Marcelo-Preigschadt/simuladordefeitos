@@ -14,9 +14,9 @@
       type="image/svg+xml"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%2305080c'/%3E%3Cpath d='M16 17h32v23H16zM24 47h16M32 40v7' fill='none' stroke='%2329e6b1' stroke-width='5' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='43' cy='35' r='2.5' fill='%23ffb454'/%3E%3C/svg%3E"
     />
-    <link rel="stylesheet" href="./styles.css?v=20260923-10" />
-    <script src="./data.js?v=20260923-10" defer></script>
-    <script src="./app.js?v=20260923-10" defer></script>
+    <link rel="stylesheet" href="./styles.css?v=20260923-11" />
+    <script src="./data.js?v=20260923-11" defer></script>
+    <script src="./app.js?v=20260923-11" defer></script>
   </head>
   <body>
     <div class="ambient-grid" aria-hidden="true"></div>
@@ -139,24 +139,6 @@
           </article>
 
           <div class="top-controls" aria-label="Controles da bancada">
-            <section class="console-card power-card">
-              <div class="section-heading section-heading--small">
-                <div>
-                  <p class="eyebrow">Controle principal</p>
-                  <h2>Energia do computador</h2>
-                </div>
-                <span class="state-pill is-off" id="powerState">OFF</span>
-              </div>
-              <button class="power-button" id="powerButton" type="button" aria-pressed="false">
-                <span class="power-button__icon" aria-hidden="true">⏻</span>
-                <span>
-                  <strong class="power-button__label">Ligar computador</strong>
-                  <small id="powerButtonDetail">Pressione para testar a inicialização</small>
-                </span>
-              </button>
-              <p class="power-hint" id="powerHint">A estação está desenergizada.</p>
-            </section>
-
             <section class="console-card progress-card">
               <div class="section-heading section-heading--small">
                 <div>
@@ -189,6 +171,20 @@
               </div>
               <div class="monitor-neck" aria-hidden="true"></div>
               <div class="monitor-base" aria-hidden="true"></div>
+              <div class="software-tower" aria-label="Gabinete do computador">
+                <span class="software-tower__bay" aria-hidden="true"></span>
+                <button
+                  class="tower-power-button"
+                  id="softwarePowerButton"
+                  type="button"
+                  aria-label="Ligar computador"
+                  aria-pressed="false"
+                  title="Ligar computador"
+                >
+                  <span aria-hidden="true">⏻</span>
+                </button>
+                <span class="tower-power-led" aria-hidden="true"></span>
+              </div>
             </div>
 
             <div class="hardware-view" id="hardwareView">
@@ -221,6 +217,19 @@
                   <span class="network-link-led"></span>
                 </div>
                 <div class="cabinet-slots" id="cabinetSlots"></div>
+                <div class="chassis-front-panel" aria-label="Painel frontal do gabinete">
+                  <button
+                    class="tower-power-button"
+                    id="powerButton"
+                    type="button"
+                    aria-label="Ligar computador"
+                    aria-pressed="false"
+                    title="Ligar computador"
+                  >
+                    <span aria-hidden="true">⏻</span>
+                  </button>
+                  <span class="tower-power-led" aria-hidden="true"></span>
+                </div>
               </div>
               <p class="cabinet-help" id="cabinetHelp">
                 Arraste uma peça de reposição para o encaixe correspondente.
