@@ -122,10 +122,10 @@ window.SIMULATOR_DATA = (() => {
     },
     {
       id: "configure-boot",
-      name: "Corrigir a ordem de boot",
+      name: "Abrir configuração da UEFI",
       short: "UEFI",
       icon: "./assets/icons/motherboard.svg",
-      description: "Colocar o gerenciador do sistema antes de USB e rede.",
+      description: "Entrar no Setup e ajustar manualmente a prioridade de inicialização.",
     },
   ];
 
