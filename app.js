@@ -1110,6 +1110,13 @@
       await runWindowsInstallation(token, action);
       if (token !== state.sequenceToken) return;
       state.repairPhase = "complete";
+      if (isStorageInstall) {
+        dom.actionEyebrow.textContent = "Reparo concluído";
+        dom.actionHeading.textContent = "SSD e Windows validados";
+        dom.actionHelp.textContent = `${state.selectedOsEdition} foi instalado, configurado e inicializado corretamente no SSD novo.`;
+        dom.cabinetHelp.textContent = `SSD novo operacional com ${state.selectedOsEdition}.`;
+        dom.softwareActions.hidden = true;
+      }
       addLog(`${state.selectedOsEdition || "Windows 11"} instalado, configurado e iniciado pelo SSD.`, "success", "OK");
       completeCase();
       return;
